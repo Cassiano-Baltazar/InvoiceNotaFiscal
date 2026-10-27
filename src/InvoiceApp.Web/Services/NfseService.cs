@@ -116,6 +116,9 @@ public class NfseService(AppDbContext db) : INfseService
             ServiceMode = sameClientTemplate?.ServiceMode ?? ForeignServiceMode.CrossBorder,
             RelatedToTaker = sameClientTemplate?.RelatedToTaker ?? false,
             ResultCountryCode = countryCode,
+            NationalTaxCode = sameClientTemplate?.NationalTaxCode
+                ?? (await db.CompanySettings.FirstOrDefaultAsync(cancellationToken))?.DefaultNationalTaxCode
+                ?? NationalTaxCodeFromServiceListItem(template?.ServiceListItem ?? DefaultServiceListItem),
             Description = BuildDescription(invoice),
             Notes = $"Invoice {invoice.InvoiceNumber} - {invoice.Currency} {invoice.Total.ToString("N2", CultureInfo.InvariantCulture)}",
             ActivityCode = template?.ActivityCode ?? DefaultActivityCode,
@@ -154,6 +157,8 @@ public class NfseService(AppDbContext db) : INfseService
             return NfseActionResult.Fail("Country codes must have 2 letters (ISO), e.g. GB, CA, US.", id);
         if (!IsCode(model.CurrencyCode, 3))
             return NfseActionResult.Fail("Currency must have 3 letters (ISO), e.g. GBP, CAD, USD.", id);
+        if (!string.IsNullOrWhiteSpace(model.NationalTaxCode) && !System.Text.RegularExpressions.Regex.IsMatch(model.NationalTaxCode.Trim(), @"^\d{6}$"))
+            return NfseActionResult.Fail("National tax code must have 6 digits, e.g. 010101.", id);
 
         nfse.TakerName = model.TakerName.Trim();
         nfse.TakerCountry = Clean(model.TakerCountry);
@@ -180,6 +185,7 @@ public class NfseService(AppDbContext db) : INfseService
         nfse.ServiceMode = model.ServiceMode;
         nfse.RelatedToTaker = model.RelatedToTaker;
         nfse.ResultCountryCode = Clean(model.ResultCountryCode)?.ToUpperInvariant();
+        nfse.NationalTaxCode = Clean(model.NationalTaxCode);
         nfse.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -426,6 +432,10 @@ public class NfseService(AppDbContext db) : INfseService
         var text = items.Count > 0 ? string.Join("; ", items) : invoice.ServiceDescription;
         return text.Replace(" — ", " - ").Replace('—', '-');
     }
+
+    /// <summary>The city hall item "10101" (1.01, desdobro 01) is the national code "010101".</summary>
+    internal static string NationalTaxCodeFromServiceListItem(string serviceListItem) =>
+        Digits(serviceListItem).PadLeft(6, '0');
 
     private static bool IsCode(string? value, int length) =>
         string.IsNullOrWhiteSpace(value) || (value.Trim().Length == length && value.Trim().All(char.IsAsciiLetter));

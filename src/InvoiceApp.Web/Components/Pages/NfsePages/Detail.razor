@@ -1,6 +1,8 @@
 @page "/nfse/{Id:int}"
 @rendermode InteractiveServer
 @inject INfseService NfseService
+@inject INfseIssuer NfseIssuer
+@inject ICompanySettingsService SettingsService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -24,7 +26,10 @@ else
         <div class="actions-row">
             @if (nfse.Status == NfseStatus.Draft)
             {
-                <a class="btn btn-primary" href="/nfse/import?invoiceId=@nfse.InvoiceId" data-action="import-for-invoice">Import Issued XML</a>
+                <button class="btn btn-success" data-action="issue-nfse" disabled="@issuing" @onclick="IssueAsync">
+                    @(issuing ? "Issuing..." : environment == NfseEnvironment.Production ? "Issue NFS-e" : "Issue Test NFS-e")
+                </button>
+                <a class="btn btn-secondary" href="/nfse/import?invoiceId=@nfse.InvoiceId" data-action="import-for-invoice">Import Issued XML</a>
             }
             @if (!string.IsNullOrWhiteSpace(nfse.Link))
             {
@@ -38,10 +43,19 @@ else
     {
         <p class="message @(isError ? "message-error" : null)">@message</p>
     }
+    @foreach (var warning in warnings)
+    {
+        <p class="message message-warning">@warning</p>
+    }
+    @if (nfse.Status == NfseStatus.Draft && !string.IsNullOrWhiteSpace(nfse.IssueError) && nfse.IssueError != message)
+    {
+        <p class="message message-error" data-field="issue-error">Last attempt: @nfse.IssueError</p>
+    }
 
     @if (nfse.Status == NfseStatus.Draft)
     {
-        <p class="hint">Not issued yet. Fill in the amount received in BRL, issue the NFS-e on the city hall portal and then import its XML.</p>
+        <p class="hint">Not issued yet. Fill in the amounts and the taker data, save, and issue it through the Emissor Nacional
+            (@NfseLabels.Environment(environment), see Settings).</p>
 
         <EditForm Model="model" OnValidSubmit="SaveAsync">
             <h2>Taker</h2>
@@ -87,6 +101,10 @@ else
                 <div class="form-field">
                     <label>Service Date</label>
                     <InputDate @bind-Value="model.ServiceDate" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>National Tax Code</label>
+                    <InputText @bind-Value="model.NationalTaxCode" class="input" maxlength="6" placeholder="010101" data-field="national-tax-code" />
                 </div>
                 <div class="form-field">
                     <label>Activity Code</label>
@@ -183,6 +201,11 @@ else
                 <p><strong>Verification code:</strong> <span class="break">@nfse.VerificationCode</span></p>
                 <p><strong>National access key:</strong> <span class="break">@nfse.NationalAccessKey</span></p>
                 <p><strong>Provider CNPJ:</strong> @nfse.ProviderCnpj</p>
+                <p><strong>Source:</strong> @NfseLabels.Source(nfse.Source)</p>
+                @if (!string.IsNullOrWhiteSpace(nfse.DpsId))
+                {
+                    <p><strong>DPS:</strong> <span class="break">@nfse.DpsId</span></p>
+                }
             </div>
             <div class="invoice-card">
                 <strong>Taker and Service</strong>
@@ -229,6 +252,9 @@ else
     private NfseEditModel model = new();
     private decimal? exchangeRate;
     private bool loaded;
+    private bool issuing;
+    private NfseEnvironment environment = NfseEnvironment.RestrictedProduction;
+    private List<string> warnings = [];
     private bool isError;
     private string? message;
 
@@ -240,6 +266,7 @@ else
 
     private async Task LoadAsync()
     {
+        environment = (await SettingsService.GetAsync()).NfseEnvironment;
         nfse = await NfseService.GetAsync(Id);
         if (nfse is not null)
         {
@@ -278,6 +305,33 @@ else
         message = result.Message;
         if (result.Success)
             await LoadAsync();
+    }
+
+    private async Task IssueAsync()
+    {
+        if (nfse is null)
+            return;
+
+        var question = environment == NfseEnvironment.Production
+            ? $"Issue this NFS-e for real ({NfseLabels.Brl(model.AmountBrl)})? Save your changes first. A note issued in production can only be cancelled through the Emissor Nacional."
+            : "Send this draft as a TEST note to the restricted production environment? It has no fiscal value. Save your changes first.";
+        if (!await JS.InvokeAsync<bool>("confirm", question))
+            return;
+
+        issuing = true;
+        warnings = [];
+        try
+        {
+            var result = await NfseIssuer.IssueAsync(Id);
+            isError = !result.Success;
+            message = result.Message;
+            warnings = result.Warnings;
+        }
+        finally
+        {
+            issuing = false;
+        }
+        await LoadAsync();
     }
 
     private async Task DeleteAsync()

@@ -155,6 +155,33 @@ public class NfsePagesTests : ComponentTestBase
     }
 
     [Fact]
+    public void Issue_button_shows_what_is_missing()
+    {
+        ConfirmDialogsReturn(true);
+        var id = CreateDraft(SeptemberInvoice(canada));
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        Assert.Contains("Issue Test NFS-e", cut.Find("[data-action=issue-nfse]").TextContent);
+        cut.Find("[data-action=issue-nfse]").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("cannot be issued yet", cut.Find(".message").TextContent));
+        Assert.Contains("municipality code", cut.Find(".message").TextContent);
+        Assert.Empty(NationalApi.Sent);
+    }
+
+    [Fact]
+    public void Issue_button_does_nothing_when_not_confirmed()
+    {
+        ConfirmDialogsReturn(false);
+        var id = CreateDraft(SeptemberInvoice(canada));
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        cut.Find("[data-action=issue-nfse]").Click();
+
+        Assert.Empty(cut.FindAll(".message"));
+    }
+
+    [Fact]
     public void Draft_with_invalid_data_shows_the_error()
     {
         var id = CreateDraft(SeptemberInvoice(canada));

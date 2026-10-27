@@ -2,7 +2,7 @@ namespace InvoiceApp.Web.Data.Entities;
 
 /// <summary>
 /// Brazilian service invoice (NFS-e) linked to an invoice.
-/// The app does not issue NFS-e yet: a note is either a draft prepared here
+/// A note is a draft prepared here, issued from the draft through the national API (Emissor Nacional),
 /// or imported from the XML downloaded from the city hall portal.
 /// </summary>
 public class Nfse
@@ -67,6 +67,15 @@ public class Nfse
     public bool RelatedToTaker { get; set; }
     public string? ResultCountryCode { get; set; }
 
+    // Issuing through the national API. The DPS number is reserved on the first attempt and reused
+    // on retries, so a note is never issued twice for the same draft.
+    public string? NationalTaxCode { get; set; }
+    public string? DpsSeries { get; set; }
+    public long? DpsNumber { get; set; }
+    public string? DpsId { get; set; }
+    public NfseEnvironment? DpsEnvironment { get; set; }
+    public string? IssueError { get; set; }
+
     public decimal TotalWithheld => IrAmount + InssAmount + CsllAmount + PisAmount + CofinsAmount + IssWithheldAmount;
 }
 
@@ -81,5 +90,6 @@ public enum NfseStatus
 public enum NfseSource
 {
     Manual = 0,
-    Imported = 1
+    Imported = 1,
+    NationalApi = 2
 }

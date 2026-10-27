@@ -199,6 +199,8 @@ public class SchemaUpgraderTests : IDisposable
         }
         foreach (var column in NewClientColumns)
             Execute($"ALTER TABLE \"Clients\" DROP COLUMN \"{column}\";");
+        // Columns added later (v6) come after these, so a database from before v5 lacks them too.
+        DropNationalApiColumns();
         foreach (var column in NewNfseColumns)
             Execute($"ALTER TABLE \"Nfses\" DROP COLUMN \"{column}\";");
         using var check = database.CreateContext();
@@ -236,6 +238,41 @@ public class SchemaUpgraderTests : IDisposable
         Assert.Equal(ForeignServiceMode.CrossBorder, note.ServiceMode);
         Assert.False(note.RelatedToTaker);
         Assert.Null((await check.Clients.SingleAsync()).CountryCode);
+    }
+
+    // ---------- National API columns ----------
+
+    private void DropNationalApiColumns()
+    {
+        Execute("DROP INDEX \"IX_Nfses_DpsId\";");
+        foreach (var column in new[] { "NfseEnvironment", "MunicipalityCode", "DpsSeries", "NextDpsNumber", "DefaultNationalTaxCode", "SimplesNacionalTaxRate" })
+            Execute($"ALTER TABLE \"CompanySettings\" DROP COLUMN \"{column}\";");
+        foreach (var column in new[] { "NationalTaxCode", "DpsSeries", "DpsNumber", "DpsId", "DpsEnvironment", "IssueError" })
+            Execute($"ALTER TABLE \"Nfses\" DROP COLUMN \"{column}\";");
+    }
+
+    [Fact]
+    public async Task Adds_national_api_columns_matching_the_model()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        DropNationalApiColumns();
+
+        using (var db = database.CreateContext())
+        {
+            await SchemaUpgrader.UpgradeAsync(db);
+            await SchemaUpgrader.UpgradeAsync(db);
+        }
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "CompanySettings"), Columns(database.Connection, "CompanySettings"));
+        Assert.Equal(Columns(fresh.Connection, "Nfses"), Columns(database.Connection, "Nfses"));
+        Assert.Equal(Indexes(fresh.Connection, "Nfses"), Indexes(database.Connection, "Nfses"));
+        using var check = database.CreateContext();
+        var company = await check.CompanySettings.SingleAsync();
+        Assert.Equal(NfseEnvironment.RestrictedProduction, company.NfseEnvironment);
+        Assert.Equal("1", company.DpsSeries);
+        Assert.Equal(1, company.NextDpsNumber);
+        Assert.Equal("010101", company.DefaultNationalTaxCode);
     }
 
     private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)

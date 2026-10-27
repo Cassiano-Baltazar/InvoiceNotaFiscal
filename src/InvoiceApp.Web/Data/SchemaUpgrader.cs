@@ -14,6 +14,29 @@ public static class SchemaUpgrader
         await AddNfsesAsync(db, cancellationToken);
         await AddDigitalCertificatesAsync(db, cancellationToken);
         await AddForeignTradeColumnsAsync(db, cancellationToken);
+        await AddNationalApiColumnsAsync(db, cancellationToken);
+    }
+
+    // v6: issuing NFS-e through the national API (Emissor Nacional).
+    private static async Task AddNationalApiColumnsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        await AddColumnAsync(db, "CompanySettings", "NfseEnvironment", "INTEGER NOT NULL DEFAULT 2", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "MunicipalityCode", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "DpsSeries", "TEXT NOT NULL DEFAULT '1'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "NextDpsNumber", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "DefaultNationalTaxCode", "TEXT NOT NULL DEFAULT '010101'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "SimplesNacionalTaxRate", "TEXT NOT NULL DEFAULT '0.0'", cancellationToken);
+
+        await AddColumnAsync(db, "Nfses", "NationalTaxCode", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsSeries", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsNumber", "INTEGER NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsId", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsEnvironment", "INTEGER NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "IssueError", "TEXT NULL", cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_Nfses_DpsId" ON "Nfses" ("DpsId");
+            """, cancellationToken);
     }
 
     // v5: data the NFS-e needs for a foreign taker (tax id, country code) and for foreign trade

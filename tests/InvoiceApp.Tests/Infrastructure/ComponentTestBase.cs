@@ -14,6 +14,7 @@ public abstract class ComponentTestBase : BunitContext
 {
     protected TestDatabase Database { get; } = new();
     protected FakePdfExportService Pdf { get; } = new();
+    protected FakeNationalNfseApi NationalApi { get; } = new();
 
     protected ComponentTestBase()
     {
@@ -22,6 +23,9 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
         Services.AddSingleton<ISecretProtector>(new AesSecretProtector(new byte[32]));
         Services.AddScoped<ICertificateService, CertificateService>();
+        Services.AddSingleton<INationalNfseApi>(NationalApi);
+        Services.AddSingleton(TimeProvider.System);
+        Services.AddScoped<INfseIssuer, NfseIssuer>();
         Services.AddScoped<INfseService, NfseService>();
         Services.AddScoped<IInvoiceService, InvoiceService>();
         Services.AddSingleton<IPdfExportService>(Pdf);

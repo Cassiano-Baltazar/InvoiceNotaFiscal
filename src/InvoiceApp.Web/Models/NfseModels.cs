@@ -30,6 +30,7 @@ public class NfseEditModel
     public ForeignServiceMode ServiceMode { get; set; } = ForeignServiceMode.CrossBorder;
     public bool RelatedToTaker { get; set; }
     public string? ResultCountryCode { get; set; }
+    public string? NationalTaxCode { get; set; }
 
     public static NfseEditModel FromNfse(Nfse nfse) => new()
     {
@@ -57,7 +58,8 @@ public class NfseEditModel
         AmountForeign = nfse.AmountForeign,
         ServiceMode = nfse.ServiceMode,
         RelatedToTaker = nfse.RelatedToTaker,
-        ResultCountryCode = nfse.ResultCountryCode
+        ResultCountryCode = nfse.ResultCountryCode,
+        NationalTaxCode = nfse.NationalTaxCode
     };
 }
 

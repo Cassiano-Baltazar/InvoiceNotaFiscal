@@ -16,6 +16,21 @@ public static class NfseLabels
         _ => status.ToString()
     };
 
+    public static string Source(NfseSource source) => source switch
+    {
+        NfseSource.Manual => "Manual",
+        NfseSource.Imported => "Imported",
+        NfseSource.NationalApi => "Emissor Nacional",
+        _ => source.ToString()
+    };
+
+    public static string Environment(NfseEnvironment environment) => environment switch
+    {
+        NfseEnvironment.Production => "Production",
+        NfseEnvironment.RestrictedProduction => "Restricted production (tests, no fiscal value)",
+        _ => environment.ToString()
+    };
+
     public static string Brl(decimal amount) => "R$ " + amount.ToString("N2", PtBr);
 
     public static string Number(Nfse nfse) =>

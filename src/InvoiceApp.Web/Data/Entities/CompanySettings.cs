@@ -18,4 +18,19 @@ public class CompanySettings
     public int IssueDay { get; set; } = 1;
     public int PaymentTermsDays { get; set; } = 15;
     public string ServiceDescriptionTemplate { get; set; } = "Software development services — {serviceMonth}";
+
+    // NFS-e issued through the national API (Emissor Nacional). The app supports Simples Nacional ME/EPP.
+    public NfseEnvironment NfseEnvironment { get; set; } = NfseEnvironment.RestrictedProduction;
+    public string MunicipalityCode { get; set; } = string.Empty;
+    public string DpsSeries { get; set; } = "1";
+    public long NextDpsNumber { get; set; } = 1;
+    public string DefaultNationalTaxCode { get; set; } = "010101";
+    public decimal SimplesNacionalTaxRate { get; set; }
+}
+
+/// <summary>Environment of the national NFS-e API. Values are the tpAmb codes of the DPS.</summary>
+public enum NfseEnvironment
+{
+    Production = 1,
+    RestrictedProduction = 2
 }

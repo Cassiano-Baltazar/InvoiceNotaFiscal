@@ -20,6 +20,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.LegalName).HasMaxLength(200);
             entity.Property(x => x.TradeName).HasMaxLength(100);
             entity.Property(x => x.OutputBasePath).HasMaxLength(500);
+            entity.Property(x => x.MunicipalityCode).HasMaxLength(7);
+            entity.Property(x => x.DpsSeries).HasMaxLength(5);
+            entity.Property(x => x.DefaultNationalTaxCode).HasMaxLength(6);
+            entity.Property(x => x.SimplesNacionalTaxRate).HasPrecision(5, 2);
         });
 
         modelBuilder.Entity<DigitalCertificate>(entity =>
@@ -95,6 +99,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.CurrencyCode).HasMaxLength(3);
             entity.Property(x => x.AmountForeign).HasPrecision(18, 2);
             entity.Property(x => x.ResultCountryCode).HasMaxLength(2);
+            entity.Property(x => x.NationalTaxCode).HasMaxLength(6);
+            entity.Property(x => x.DpsSeries).HasMaxLength(5);
+            entity.Property(x => x.DpsId).HasMaxLength(45);
+            entity.HasIndex(x => x.DpsId).IsUnique();
             entity.Ignore(x => x.TotalWithheld);
             entity.HasIndex(x => x.InvoiceId);
             entity.HasIndex(x => new { x.Series, x.Number }).IsUnique();

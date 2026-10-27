@@ -77,6 +77,44 @@ else
             </div>
         </div>
 
+        <h2>NFS-e (Emissor Nacional)</h2>
+        <p class="hint">Used to issue NFS-e through the national API. The company must be Simples Nacional ME/EPP.
+            Start in restricted production (test notes, no fiscal value) and switch to production when a test note is accepted.</p>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Environment</label>
+                <InputSelect @bind-Value="model.NfseEnvironment" class="input" data-field="nfse-environment">
+                    @foreach (var environment in Enum.GetValues<NfseEnvironment>())
+                    {
+                        <option value="@environment">@NfseLabels.Environment(environment)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-field">
+                <label>Municipality Code (IBGE)</label>
+                <InputText @bind-Value="model.MunicipalityCode" class="input" placeholder="4309308" maxlength="7" data-field="municipality-code" />
+                <small>7 digits. Guaíba/RS is 4309308.</small>
+            </div>
+            <div class="form-field">
+                <label>DPS Series</label>
+                <InputText @bind-Value="model.DpsSeries" class="input" maxlength="5" data-field="dps-series" />
+            </div>
+            <div class="form-field">
+                <label>Next DPS Number</label>
+                <InputNumber @bind-Value="model.NextDpsNumber" class="input" min="1" data-field="next-dps-number" />
+            </div>
+            <div class="form-field">
+                <label>Default National Tax Code</label>
+                <InputText @bind-Value="model.DefaultNationalTaxCode" class="input" maxlength="6" data-field="national-tax-code" />
+                <small>cTribNac, 6 digits. 010101 is software development (item 1.01).</small>
+            </div>
+            <div class="form-field">
+                <label>Approximate Simples Nacional Tax Rate (%)</label>
+                <InputNumber @bind-Value="model.SimplesNacionalTaxRate" class="input" step="0.01" data-field="simples-rate" />
+                <small>Shown on the note as the approximate total of taxes (pTotTribSN). Ask your accountant.</small>
+            </div>
+        </div>
+
         @if (!string.IsNullOrWhiteSpace(message))
         {
             <p class="message">@message</p>

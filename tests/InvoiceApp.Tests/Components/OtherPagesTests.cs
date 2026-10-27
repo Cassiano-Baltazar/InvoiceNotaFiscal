@@ -106,6 +106,26 @@ public class OtherPagesTests : ComponentTestBase
     }
 
     [Fact]
+    public void Nfse_settings_are_saved()
+    {
+        Database.SeedCompany();
+        var cut = Render<SettingsIndex>();
+
+        cut.Find("[data-field=municipality-code]").Change("4309308");
+        cut.Find("[data-field=simples-rate]").Change("6.5");
+        cut.Find("[data-field=nfse-environment]").Change(nameof(NfseEnvironment.Production));
+        cut.Find("form").Submit();
+
+        using var db = Database.CreateContext();
+        var saved = db.CompanySettings.AsNoTracking().Single();
+        Assert.Equal("4309308", saved.MunicipalityCode);
+        Assert.Equal(6.5m, saved.SimplesNacionalTaxRate);
+        Assert.Equal(NfseEnvironment.Production, saved.NfseEnvironment);
+        Assert.Equal("1", saved.DpsSeries);
+        Assert.Equal(1, saved.NextDpsNumber);
+    }
+
+    [Fact]
     public void Settings_are_loaded_and_saved()
     {
         Database.SeedCompany();
