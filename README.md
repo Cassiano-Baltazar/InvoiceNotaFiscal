@@ -59,6 +59,11 @@ The app does not issue NFS-e: notes are issued on the city hall portal (IPM / At
   Replaced (*substituída*) and cancelled notes are kept as history. The same XML cannot be imported twice
   (checked by the national access key, or by number and series). An invoice with an NFS-e cannot be deleted.
 - The original XML is stored with the note and shown on its page.
+- **Foreign taker and foreign trade:** the client record has the ISO country code and the tax id (NIF) in its
+  country, or the reason it has none. A new draft copies them, together with the invoice currency and total
+  (amount in the foreign currency), the service mode (cross-border by default), whether the company is related to
+  the taker and the country where the result is used. These are the data the NFS-e needs for an exported service.
+  On the draft, the exchange rate turns the foreign amount into the amount in BRL.
 - **Digital certificate:** **Settings > Digital Certificate (NFS-e)** stores the e-CNPJ A1 certificate (`.pfx`)
   that will be used to issue NFS-e. The file is checked with its password (it must contain the private key) and
   stored in the database, with holder, issuer and expiry date shown on the screen. The password is encrypted with

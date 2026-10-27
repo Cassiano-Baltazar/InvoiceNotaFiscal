@@ -182,6 +182,62 @@ public class SchemaUpgraderTests : IDisposable
         Assert.Equal([1, 2, 3], (await check.DigitalCertificates.SingleAsync()).PfxData);
     }
 
+    // ---------- Foreign trade columns ----------
+
+    private static readonly string[] NewClientColumns = ["CountryCode", "TaxId", "MissingTaxIdReason"];
+    private static readonly string[] NewNfseColumns =
+        ["TakerTaxId", "TakerMissingTaxIdReason", "CurrencyCode", "AmountForeign", "ServiceMode", "RelatedToTaker", "ResultCountryCode"];
+
+    private int MakeDatabaseWithoutForeignTradeColumns()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        using (var context = database.CreateContext())
+        {
+            var invoice = context.Invoices.Single();
+            context.Nfses.Add(new Nfse { InvoiceId = invoice.Id, TakerName = "X", Description = "Y", AmountBrl = 10m });
+            context.SaveChanges();
+        }
+        foreach (var column in NewClientColumns)
+            Execute($"ALTER TABLE \"Clients\" DROP COLUMN \"{column}\";");
+        foreach (var column in NewNfseColumns)
+            Execute($"ALTER TABLE \"Nfses\" DROP COLUMN \"{column}\";");
+        using var check = database.CreateContext();
+        return check.Invoices.Single().Id;
+    }
+
+    [Fact]
+    public async Task Adds_foreign_trade_columns_matching_the_model()
+    {
+        MakeDatabaseWithoutForeignTradeColumns();
+
+        using (var db = database.CreateContext())
+        {
+            await SchemaUpgrader.UpgradeAsync(db);
+            await SchemaUpgrader.UpgradeAsync(db);
+        }
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "Clients"), Columns(database.Connection, "Clients"));
+        Assert.Equal(Columns(fresh.Connection, "Nfses"), Columns(database.Connection, "Nfses"));
+    }
+
+    [Fact]
+    public async Task Existing_notes_get_the_invoice_currency_and_amount()
+    {
+        MakeDatabaseWithoutForeignTradeColumns();
+
+        using (var db = database.CreateContext())
+            await SchemaUpgrader.UpgradeAsync(db);
+
+        using var check = database.CreateContext();
+        var note = await check.Nfses.SingleAsync();
+        Assert.Equal("CAD", note.CurrencyCode);
+        Assert.Equal(4000m, note.AmountForeign);
+        Assert.Equal(ForeignServiceMode.CrossBorder, note.ServiceMode);
+        Assert.False(note.RelatedToTaker);
+        Assert.Null((await check.Clients.SingleAsync()).CountryCode);
+    }
+
     private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)
     {
         using var command = connection.CreateCommand();

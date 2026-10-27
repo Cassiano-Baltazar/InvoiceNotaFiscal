@@ -23,6 +23,13 @@ public class NfseEditModel
     public decimal PisAmount { get; set; }
     public decimal CofinsAmount { get; set; }
     public decimal IssWithheldAmount { get; set; }
+    public string? TakerTaxId { get; set; }
+    public MissingTaxIdReason? TakerMissingTaxIdReason { get; set; }
+    public string? CurrencyCode { get; set; }
+    public decimal AmountForeign { get; set; }
+    public ForeignServiceMode ServiceMode { get; set; } = ForeignServiceMode.CrossBorder;
+    public bool RelatedToTaker { get; set; }
+    public string? ResultCountryCode { get; set; }
 
     public static NfseEditModel FromNfse(Nfse nfse) => new()
     {
@@ -43,7 +50,14 @@ public class NfseEditModel
         CsllAmount = nfse.CsllAmount,
         PisAmount = nfse.PisAmount,
         CofinsAmount = nfse.CofinsAmount,
-        IssWithheldAmount = nfse.IssWithheldAmount
+        IssWithheldAmount = nfse.IssWithheldAmount,
+        TakerTaxId = nfse.TakerTaxId,
+        TakerMissingTaxIdReason = nfse.TakerMissingTaxIdReason,
+        CurrencyCode = nfse.CurrencyCode,
+        AmountForeign = nfse.AmountForeign,
+        ServiceMode = nfse.ServiceMode,
+        RelatedToTaker = nfse.RelatedToTaker,
+        ResultCountryCode = nfse.ResultCountryCode
     };
 }
 

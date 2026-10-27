@@ -22,6 +22,11 @@ public class ClientService(AppDbContext db) : IClientService
 
     public async Task<Client> SaveAsync(Client client, CancellationToken cancellationToken = default)
     {
+        client.CountryCode = string.IsNullOrWhiteSpace(client.CountryCode) ? null : client.CountryCode.Trim().ToUpperInvariant();
+        client.TaxId = string.IsNullOrWhiteSpace(client.TaxId) ? null : client.TaxId.Trim();
+        if (client.TaxId is not null)
+            client.MissingTaxIdReason = null;
+
         if (client.Id == 0)
         {
             client.CreatedAt = DateTime.UtcNow;

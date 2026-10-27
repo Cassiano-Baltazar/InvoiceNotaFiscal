@@ -57,6 +57,16 @@ public class Nfse
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // Foreign taker and foreign trade (comércio exterior) data, required to issue the note.
+    // Kept at the end so databases upgraded with ALTER TABLE have the same column order.
+    public string? TakerTaxId { get; set; }
+    public MissingTaxIdReason? TakerMissingTaxIdReason { get; set; }
+    public string? CurrencyCode { get; set; }
+    public decimal AmountForeign { get; set; }
+    public ForeignServiceMode ServiceMode { get; set; } = ForeignServiceMode.CrossBorder;
+    public bool RelatedToTaker { get; set; }
+    public string? ResultCountryCode { get; set; }
+
     public decimal TotalWithheld => IrAmount + InssAmount + CsllAmount + PisAmount + CofinsAmount + IssWithheldAmount;
 }
 

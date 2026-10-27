@@ -56,7 +56,21 @@ else
                 </div>
                 <div class="form-field">
                     <label>Country Code</label>
-                    <InputText @bind-Value="model.TakerCountryCode" class="input" placeholder="CA, GB, US..." />
+                    <InputText @bind-Value="model.TakerCountryCode" class="input" placeholder="CA, GB, US..." maxlength="2" />
+                </div>
+                <div class="form-field">
+                    <label>Tax ID (NIF)</label>
+                    <InputText @bind-Value="model.TakerTaxId" class="input" data-field="taker-tax-id" />
+                </div>
+                <div class="form-field">
+                    <label>Reason for no Tax ID</label>
+                    <InputSelect @bind-Value="model.TakerMissingTaxIdReason" class="input" disabled="@(!string.IsNullOrWhiteSpace(model.TakerTaxId))">
+                        <option value="">—</option>
+                        @foreach (var reason in Enum.GetValues<MissingTaxIdReason>())
+                        {
+                            <option value="@reason">@NfseLabels.TaxIdReasonLabel(reason)</option>
+                        }
+                    </InputSelect>
                 </div>
             </div>
 
@@ -99,7 +113,15 @@ else
             <h2>Amount</h2>
             <div class="form-grid">
                 <div class="form-field">
-                    <label>Exchange Rate (BRL per @nfse.Invoice.Currency)</label>
+                    <label>Currency</label>
+                    <InputText @bind-Value="model.CurrencyCode" class="input" placeholder="GBP, CAD, USD..." maxlength="3" data-field="currency-code" />
+                </div>
+                <div class="form-field">
+                    <label>Amount (@(model.CurrencyCode ?? nfse.Invoice.Currency))</label>
+                    <InputNumber @bind-Value="model.AmountForeign" @bind-Value:after="UpdateAmountBrl" class="input" data-field="amount-foreign" />
+                </div>
+                <div class="form-field">
+                    <label>Exchange Rate (BRL per @(model.CurrencyCode ?? nfse.Invoice.Currency))</label>
                     <input class="input" type="number" step="0.0001" data-field="exchange-rate"
                            value="@exchangeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                            @onchange="OnExchangeRateChanged" />
@@ -107,6 +129,28 @@ else
                 <div class="form-field">
                     <label>Amount (BRL)</label>
                     <InputNumber @bind-Value="model.AmountBrl" @bind-Value:after="UpdateExchangeRate" class="input" data-field="amount-brl" />
+                </div>
+            </div>
+
+            <h2>Foreign Trade</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Service Mode</label>
+                    <InputSelect @bind-Value="model.ServiceMode" class="input" data-field="service-mode">
+                        @foreach (var mode in Enum.GetValues<ForeignServiceMode>())
+                        {
+                            <option value="@mode">@NfseLabels.ServiceModeLabel(mode)</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="form-field">
+                    <label>Country where the result is used</label>
+                    <InputText @bind-Value="model.ResultCountryCode" class="input" placeholder="CA, GB, US..." maxlength="2" data-field="result-country-code" />
+                </div>
+                <div class="form-field">
+                    <label>
+                        <InputCheckbox @bind-Value="model.RelatedToTaker" /> Company is related to the taker (same group, parent, branch...)
+                    </label>
                 </div>
             </div>
 
@@ -144,6 +188,7 @@ else
                 <strong>Taker and Service</strong>
                 <p><strong>Taker:</strong> @nfse.TakerName</p>
                 <p><strong>Country:</strong> @nfse.TakerCountry @(string.IsNullOrWhiteSpace(nfse.TakerCountryCode) ? "" : $"({nfse.TakerCountryCode})")</p>
+                <p><strong>Tax ID:</strong> @(nfse.TakerTaxId ?? (nfse.TakerMissingTaxIdReason is { } reason ? NfseLabels.TaxIdReasonLabel(reason) : "—"))</p>
                 <p><strong>Description:</strong> @nfse.Description</p>
                 @if (!string.IsNullOrWhiteSpace(nfse.Notes))
                 {
@@ -155,6 +200,7 @@ else
             <div class="invoice-card">
                 <strong>Amounts (BRL)</strong>
                 <p><strong>Total:</strong> @NfseLabels.Brl(nfse.AmountBrl)</p>
+                <p><strong>Foreign amount:</strong> @(nfse.AmountForeign > 0 ? $"{nfse.AmountForeign:N2} {nfse.CurrencyCode}" : "—")</p>
                 <p><strong>Exchange rate:</strong> @(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</p>
                 <p><strong>IR:</strong> @NfseLabels.Brl(nfse.IrAmount)</p>
                 <p><strong>INSS:</strong> @NfseLabels.Brl(nfse.InssAmount)</p>
@@ -210,12 +256,19 @@ else
             return;
 
         exchangeRate = rate;
-        model.AmountBrl = Math.Round(nfse.Invoice.Total * rate, 2, MidpointRounding.AwayFromZero);
+        UpdateAmountBrl();
+    }
+
+    // The amount in BRL follows the exchange rate; typing the BRL amount updates the rate instead.
+    private void UpdateAmountBrl()
+    {
+        if (exchangeRate is { } rate && model.AmountForeign > 0)
+            model.AmountBrl = Math.Round(model.AmountForeign * rate, 2, MidpointRounding.AwayFromZero);
     }
 
     private void UpdateExchangeRate() =>
-        exchangeRate = nfse is not null && nfse.Invoice.Total > 0 && model.AmountBrl > 0
-            ? Math.Round(model.AmountBrl / nfse.Invoice.Total, 4)
+        exchangeRate = model.AmountForeign > 0 && model.AmountBrl > 0
+            ? Math.Round(model.AmountBrl / model.AmountForeign, 4)
             : null;
 
     private async Task SaveAsync()

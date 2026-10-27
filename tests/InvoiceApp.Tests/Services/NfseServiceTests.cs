@@ -160,13 +160,100 @@ public class NfseServiceTests : ServiceTestBase
         Assert.Equal(new DateOnly(2026, 10, 8), draft.ServiceDate);
     }
 
+    // ---------- Foreign taker and foreign trade ----------
+
+    [Fact]
+    public async Task Draft_takes_tax_id_country_and_foreign_amount_from_the_client_and_invoice()
+    {
+        using (var db = NewContext())
+        {
+            var client = db.Clients.Single(x => x.Id == uk.Id);
+            client.CountryCode = "gb";
+            client.TaxId = "12345678";
+            await new ClientService(db).SaveAsync(client);
+        }
+        var invoice = SeptemberInvoice(uk);
+
+        await CreateNfseService().CreateDraftForInvoiceAsync(invoice.Id);
+
+        var draft = Assert.Single(AllNfses());
+        Assert.Equal("GB", draft.TakerCountryCode);
+        Assert.Equal("GB", draft.ResultCountryCode);
+        Assert.Equal("12345678", draft.TakerTaxId);
+        Assert.Null(draft.TakerMissingTaxIdReason);
+        Assert.Equal("GBP", draft.CurrencyCode);
+        Assert.Equal(1000m, draft.AmountForeign);
+        Assert.Equal(ForeignServiceMode.CrossBorder, draft.ServiceMode);
+        Assert.False(draft.RelatedToTaker);
+    }
+
+    [Fact]
+    public async Task Draft_takes_the_reason_when_the_client_has_no_tax_id()
+    {
+        using (var db = NewContext())
+        {
+            var client = db.Clients.Single(x => x.Id == canada.Id);
+            client.MissingTaxIdReason = MissingTaxIdReason.NotRequired;
+            await db.SaveChangesAsync();
+        }
+
+        await CreateNfseService().CreateDraftForInvoiceAsync(SeptemberInvoice(canada).Id);
+
+        var draft = Assert.Single(AllNfses());
+        Assert.Null(draft.TakerTaxId);
+        Assert.Equal(MissingTaxIdReason.NotRequired, draft.TakerMissingTaxIdReason);
+    }
+
+    [Fact]
+    public async Task Saves_foreign_trade_fields_and_drops_the_reason_when_a_tax_id_is_typed()
+    {
+        var draftId = (await CreateNfseService().CreateDraftForInvoiceAsync(SeptemberInvoice(canada).Id)).NfseId!.Value;
+        var model = ValidDraft();
+        model.TakerTaxId = " 123456789RC0001 ";
+        model.TakerMissingTaxIdReason = MissingTaxIdReason.Exempt;
+        model.CurrencyCode = "cad";
+        model.AmountForeign = 4000.004m;
+        model.ServiceMode = ForeignServiceMode.ConsumptionInBrazil;
+        model.RelatedToTaker = true;
+        model.ResultCountryCode = "ca";
+
+        var result = await CreateNfseService().UpdateDraftAsync(draftId, model);
+
+        Assert.True(result.Success);
+        var draft = Assert.Single(AllNfses());
+        Assert.Equal("123456789RC0001", draft.TakerTaxId);
+        Assert.Null(draft.TakerMissingTaxIdReason);
+        Assert.Equal("CAD", draft.CurrencyCode);
+        Assert.Equal(4000m, draft.AmountForeign);
+        Assert.Equal(ForeignServiceMode.ConsumptionInBrazil, draft.ServiceMode);
+        Assert.True(draft.RelatedToTaker);
+        Assert.Equal("CA", draft.ResultCountryCode);
+    }
+
+    [Fact]
+    public async Task Imported_note_gets_the_currency_and_amount_of_the_invoice()
+    {
+        var invoice = SeptemberInvoice(uk);
+
+        await CreateNfseService().ImportAsync("NFSE_6.xml", NfseFixtures.Read(NfseFixtures.IssuedUk), invoice.Id);
+
+        var note = Assert.Single(AllNfses());
+        Assert.Equal("GBP", note.CurrencyCode);
+        Assert.Equal(1000m, note.AmountForeign);
+        Assert.Equal("GB", note.ResultCountryCode);
+    }
+
     public static TheoryData<string, Action<NfseEditModel>> InvalidDrafts => new()
     {
         { "Taker name", m => m.TakerName = "" },
         { "Service description", m => m.Description = " " },
         { "Amount in BRL", m => m.AmountBrl = -1 },
         { "ISS rate", m => m.IssRate = 101 },
-        { "Tax amounts", m => m.PisAmount = -0.01m }
+        { "Tax amounts", m => m.PisAmount = -0.01m },
+        { "Amount in the foreign currency", m => m.AmountForeign = -1 },
+        { "Country codes", m => m.TakerCountryCode = "CAN" },
+        { "Country codes", m => m.ResultCountryCode = "1" },
+        { "Currency", m => m.CurrencyCode = "CA$" }
     };
 
     [Theory]

@@ -61,6 +61,25 @@
             <InputText @bind-Value="model.WisePaymentLink" class="input" />
         </div>
         <div class="form-field">
+            <label>Country Code (ISO)</label>
+            <InputText @bind-Value="model.CountryCode" class="input" placeholder="CA, GB, US..." maxlength="2" data-field="country-code" />
+        </div>
+        <div class="form-field">
+            <label>Tax ID (NIF)</label>
+            <InputText @bind-Value="model.TaxId" class="input" data-field="tax-id" />
+            <small>The client's tax number in its country (e.g. Business Number, Company Number, VAT, EIN).</small>
+        </div>
+        <div class="form-field">
+            <label>Reason for no Tax ID</label>
+            <InputSelect @bind-Value="model.MissingTaxIdReason" class="input" disabled="@(!string.IsNullOrWhiteSpace(model.TaxId))" data-field="missing-tax-id-reason">
+                <option value="">—</option>
+                @foreach (var reason in Enum.GetValues<MissingTaxIdReason>())
+                {
+                    <option value="@reason">@NfseLabels.TaxIdReasonLabel(reason)</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="form-field">
             <label>
                 <InputCheckbox @bind-Value="model.IsActive" /> Active
             </label>

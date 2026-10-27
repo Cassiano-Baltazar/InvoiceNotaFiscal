@@ -41,6 +41,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.Currency).HasMaxLength(10).IsRequired();
             entity.Property(x => x.MonthlyAmount).HasPrecision(18, 2);
             entity.Property(x => x.WisePaymentLink).HasMaxLength(500);
+            entity.Property(x => x.CountryCode).HasMaxLength(2);
+            entity.Property(x => x.TaxId).HasMaxLength(40);
         });
 
         modelBuilder.Entity<Invoice>(entity =>
@@ -89,6 +91,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.PisAmount).HasPrecision(18, 2);
             entity.Property(x => x.CofinsAmount).HasPrecision(18, 2);
             entity.Property(x => x.IssWithheldAmount).HasPrecision(18, 2);
+            entity.Property(x => x.TakerTaxId).HasMaxLength(40);
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3);
+            entity.Property(x => x.AmountForeign).HasPrecision(18, 2);
+            entity.Property(x => x.ResultCountryCode).HasMaxLength(2);
             entity.Ignore(x => x.TotalWithheld);
             entity.HasIndex(x => x.InvoiceId);
             entity.HasIndex(x => new { x.Series, x.Number }).IsUnique();

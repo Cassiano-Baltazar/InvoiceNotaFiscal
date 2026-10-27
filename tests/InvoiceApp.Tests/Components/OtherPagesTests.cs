@@ -75,6 +75,22 @@ public class OtherPagesTests : ComponentTestBase
     }
 
     [Fact]
+    public void Client_nfse_fields_are_saved()
+    {
+        var client = Database.SeedClient("Alpha");
+        var cut = Render<ClientEdit>(p => p.Add(x => x.Id, client.Id));
+
+        cut.Find("[data-field=country-code]").Change("ca");
+        cut.Find("[data-field=tax-id]").Change("123456789RC0001");
+        cut.Find("form").Submit();
+
+        using var db = Database.CreateContext();
+        var saved = db.Clients.AsNoTracking().Single();
+        Assert.Equal("CA", saved.CountryCode);
+        Assert.Equal("123456789RC0001", saved.TaxId);
+    }
+
+    [Fact]
     public void Existing_client_is_loaded_and_updated()
     {
         var client = Database.SeedClient("Alpha");
