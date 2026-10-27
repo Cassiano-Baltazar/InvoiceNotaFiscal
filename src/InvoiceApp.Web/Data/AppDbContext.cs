@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
+    public DbSet<Nfse> Nfses => Set<Nfse>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +58,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(x => x.Items)
                 .HasForeignKey(x => x.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Nfse>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Number).HasMaxLength(20);
+            entity.Property(x => x.Series).HasMaxLength(10);
+            entity.Property(x => x.TakerName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.IssRate).HasPrecision(9, 4);
+            entity.Property(x => x.AmountBrl).HasPrecision(18, 2);
+            entity.Property(x => x.Discount).HasPrecision(18, 2);
+            entity.Property(x => x.IrAmount).HasPrecision(18, 2);
+            entity.Property(x => x.InssAmount).HasPrecision(18, 2);
+            entity.Property(x => x.CsllAmount).HasPrecision(18, 2);
+            entity.Property(x => x.PisAmount).HasPrecision(18, 2);
+            entity.Property(x => x.CofinsAmount).HasPrecision(18, 2);
+            entity.Property(x => x.IssWithheldAmount).HasPrecision(18, 2);
+            entity.Ignore(x => x.TotalWithheld);
+            entity.HasIndex(x => x.InvoiceId);
+            entity.HasIndex(x => new { x.Series, x.Number }).IsUnique();
+            entity.HasOne(x => x.Invoice)
+                .WithMany(x => x.Nfses)
+                .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

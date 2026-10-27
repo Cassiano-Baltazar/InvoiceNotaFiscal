@@ -1,0 +1,89 @@
+@page "/nfse"
+@rendermode InteractiveServer
+@inject INfseService NfseService
+
+<PageTitle>NFS-e</PageTitle>
+
+<div class="page-header">
+    <h1>NFS-e</h1>
+    <div class="actions-row">
+        <a class="btn btn-secondary" href="/nfse/new">New Draft</a>
+        <a class="btn btn-primary" href="/nfse/import">Import XML</a>
+    </div>
+</div>
+
+<div class="filters narrow-filters">
+    <div class="form-field">
+        <label>Status</label>
+        <select class="input" @bind="filterStatus" @bind:after="LoadAsync">
+            <option value="">All</option>
+            @foreach (var status in Enum.GetValues<NfseStatus>())
+            {
+                <option value="@status">@NfseLabels.Status(status)</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (nfses is null)
+{
+    <p>Loading...</p>
+}
+else if (nfses.Count == 0)
+{
+    <p>No NFS-e yet. Import the XML files downloaded from the city hall portal, or mark an invoice as paid to create a draft.</p>
+}
+else
+{
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Number</th>
+                <th>Issued</th>
+                <th>Taker</th>
+                <th>Invoice</th>
+                <th>Amount (BRL)</th>
+                <th>Rate</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var nfse in nfses)
+            {
+                <tr>
+                    <td>@NfseLabels.Number(nfse)</td>
+                    <td>@(nfse.IssuedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                    <td>@nfse.TakerName</td>
+                    <td><a href="/invoices/@nfse.InvoiceId">@nfse.Invoice.InvoiceNumber</a></td>
+                    <td>@NfseLabels.Brl(nfse.AmountBrl)</td>
+                    <td>@(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</td>
+                    <td><NfseStatusBadge Status="nfse.Status" /></td>
+                    <td>@nfse.Source</td>
+                    <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? "Edit" : "View")</a></td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4"><strong>Total issued</strong></td>
+                <td><strong>@NfseLabels.Brl(nfses.Where(x => x.Status == NfseStatus.Issued).Sum(x => x.AmountBrl))</strong></td>
+                <td colspan="4"></td>
+            </tr>
+        </tfoot>
+    </table>
+}
+
+@code {
+    private List<Nfse>? nfses;
+    private string? filterStatus;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        NfseStatus? status = Enum.TryParse<NfseStatus>(filterStatus, out var parsed) ? parsed : null;
+        nfses = await NfseService.GetAllAsync(status);
+    }
+}

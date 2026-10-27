@@ -333,3 +333,54 @@ select.input {
 .totals-grid {
     margin-top: 8px;
 }
+
+.nfse-section {
+    margin: 8px 0 24px;
+}
+
+.nfse-section .page-header {
+    margin-bottom: 8px;
+}
+
+.nfse-issued {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.nfse-draft {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.nfse-replaced,
+.nfse-cancelled {
+    background: #e5e7eb;
+    color: #4b5563;
+    text-decoration: line-through;
+}
+
+.import-table .invoice-select {
+    min-width: 260px;
+}
+
+.import-table td {
+    vertical-align: top;
+}
+
+.xml-source pre {
+    background: #111827;
+    color: #e5e7eb;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+}
+
+.break {
+    word-break: break-all;
+}
+
+.narrow-filters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 16px;
+}

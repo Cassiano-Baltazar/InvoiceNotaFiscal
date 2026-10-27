@@ -14,6 +14,7 @@ Local invoice management system for a small software services company billing fo
 - PDF export and save to `Empresa/{YYYY-MM}/PDF/`
 - Invoice actions: edit, delete, cancel/reactivate, mark as sent, mark as paid
 - Multiple items per invoice (description, quantity, unit, unit price); subtotal and total are calculated from the items
+- NFS-e (nota fiscal de serviço) linked to each invoice: draft created when the invoice is paid, import of the XML files issued on the city hall portal
 
 ## Requirements
 
@@ -42,6 +43,22 @@ The app opens at **http://localhost:5099** (browser opens automatically in Relea
 If the invoice already had a saved PDF, editing regenerates it. Deleting removes the saved PDF.
 
 The rules live in `Services/InvoiceRules.cs`.
+
+## NFS-e
+
+The app does not issue NFS-e: notes are issued on the city hall portal (IPM / Atende.net) and their XML is imported.
+
+- **Draft on payment:** marking an invoice as paid creates an NFS-e draft linked to it, with the taker, description
+  and fiscal codes (activity, service list item, NBS, tax situation, ISS rate) copied from the latest note of the same
+  client. On the draft you can type the exchange rate to fill the amount in BRL. A draft can also be created from
+  the invoice page or from **NFS-e > New Draft**.
+- **Import:** **NFS-e > Import XML** accepts several files at once (for example, every file of the `NFSe` folder).
+  For each note you choose the invoice it belongs to; the app suggests one from the client name and the service
+  month in the description.
+- **Rules:** an invoice has at most one issued note. Importing the issued note replaces the invoice's draft.
+  Replaced (*substituída*) and cancelled notes are kept as history. The same XML cannot be imported twice
+  (checked by the national access key, or by number and series). An invoice with an NFS-e cannot be deleted.
+- The original XML is stored with the note and shown on its page.
 
 ## Tests
 
@@ -86,7 +103,7 @@ SQLite database is stored at:
 
 The database is created on first run. Databases from older versions are upgraded automatically at startup
 (`Data/SchemaUpgrader.cs`): for example, the `InvoiceItems` table is created and each existing invoice gets
-one item with its original description and amount.
+one item with its original description and amount, and the `Nfses` table is created.
 
 ## Output folder
 

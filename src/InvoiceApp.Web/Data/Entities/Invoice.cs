@@ -35,4 +35,5 @@ public class Invoice
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public List<InvoiceItem> Items { get; set; } = [];
+    public List<Nfse> Nfses { get; set; } = [];
 }

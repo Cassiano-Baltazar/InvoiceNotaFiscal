@@ -1,0 +1,59 @@
+@page "/nfse/new"
+@rendermode InteractiveServer
+@inject INfseService NfseService
+@inject NavigationManager Navigation
+
+<PageTitle>New NFS-e Draft</PageTitle>
+
+<h1>New NFS-e Draft</h1>
+
+<p>The draft is prepared here with the invoice data. After issuing the NFS-e on the city hall portal, import its XML to complete it.</p>
+
+<div class="form-grid narrow">
+    <div class="form-field full-width">
+        <label>Invoice</label>
+        <select class="input" @bind="invoiceId">
+            <option value="0">Select an invoice...</option>
+            @foreach (var option in options)
+            {
+                <option value="@option.Id">@option.Label</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p class="message message-error">@error</p>
+}
+
+<div class="actions-row">
+    <button class="btn btn-primary" disabled="@(invoiceId == 0)" @onclick="CreateAsync">Create Draft</button>
+    <a class="btn btn-secondary" href="/nfse">Back</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public int? InvoiceId { get; set; }
+
+    private List<InvoiceOption> options = [];
+    private int invoiceId;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        options = await NfseService.GetInvoiceOptionsAsync();
+        invoiceId = InvoiceId ?? 0;
+    }
+
+    private async Task CreateAsync()
+    {
+        var result = await NfseService.CreateDraftForInvoiceAsync(invoiceId);
+        if (!result.Success || result.NfseId is null)
+        {
+            error = result.Message;
+            return;
+        }
+
+        Navigation.NavigateTo($"/nfse/{result.NfseId}?message={Uri.EscapeDataString(result.Message)}");
+    }
+}

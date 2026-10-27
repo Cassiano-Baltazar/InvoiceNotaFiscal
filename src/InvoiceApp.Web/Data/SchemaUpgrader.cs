@@ -11,6 +11,61 @@ public static class SchemaUpgrader
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken = default)
     {
         await AddInvoiceItemsAsync(db, cancellationToken);
+        await AddNfsesAsync(db, cancellationToken);
+    }
+
+    // v3: NFS-e (Brazilian service invoices) linked to invoices.
+    private static async Task AddNfsesAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "Nfses" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_Nfses" PRIMARY KEY AUTOINCREMENT,
+                "InvoiceId" INTEGER NOT NULL,
+                "Status" INTEGER NOT NULL,
+                "Source" INTEGER NOT NULL,
+                "Number" TEXT NULL,
+                "Series" TEXT NULL,
+                "IssuedAt" TEXT NULL,
+                "ServiceDate" TEXT NULL,
+                "VerificationCode" TEXT NULL,
+                "NationalAccessKey" TEXT NULL,
+                "Link" TEXT NULL,
+                "MunicipalStatusCode" INTEGER NULL,
+                "MunicipalStatusDescription" TEXT NULL,
+                "ProviderCnpj" TEXT NULL,
+                "TakerName" TEXT NOT NULL,
+                "TakerCountry" TEXT NULL,
+                "TakerCountryCode" TEXT NULL,
+                "Description" TEXT NOT NULL,
+                "Notes" TEXT NULL,
+                "ActivityCode" TEXT NULL,
+                "ServiceListItem" TEXT NULL,
+                "NbsCode" TEXT NULL,
+                "TaxSituation" TEXT NULL,
+                "IssRate" TEXT NOT NULL,
+                "AmountBrl" TEXT NOT NULL,
+                "Discount" TEXT NOT NULL,
+                "IrAmount" TEXT NOT NULL,
+                "InssAmount" TEXT NOT NULL,
+                "CsllAmount" TEXT NOT NULL,
+                "PisAmount" TEXT NOT NULL,
+                "CofinsAmount" TEXT NOT NULL,
+                "IssWithheldAmount" TEXT NOT NULL,
+                "FileName" TEXT NULL,
+                "XmlContent" TEXT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL,
+                CONSTRAINT "FK_Nfses_Invoices_InvoiceId" FOREIGN KEY ("InvoiceId") REFERENCES "Invoices" ("Id") ON DELETE RESTRICT
+            );
+            """, cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE INDEX IF NOT EXISTS "IX_Nfses_InvoiceId" ON "Nfses" ("InvoiceId");
+            """, cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_Nfses_Series_Number" ON "Nfses" ("Series", "Number");
+            """, cancellationToken);
     }
 
     // v2: invoices can have several items. Older invoices get one item built from their

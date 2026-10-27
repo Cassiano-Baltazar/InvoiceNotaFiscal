@@ -1,6 +1,7 @@
 @page "/invoices/{Id:int}"
 @rendermode InteractiveServer
 @inject IInvoiceService InvoiceService
+@inject INfseService NfseService
 @inject NavigationManager Navigation
 
 <PageTitle>Invoice Details</PageTitle>
@@ -39,6 +40,47 @@ else
         <p class="message message-warning">@warning</p>
     }
 
+    <section class="nfse-section">
+        <div class="page-header">
+            <h2>NFS-e</h2>
+            @if (report.Invoice.Status != InvoiceStatus.Cancelled)
+            {
+                <div class="actions-row">
+                    @if (!nfses.Any(n => n.Status is NfseStatus.Draft or NfseStatus.Issued))
+                    {
+                        <button class="btn btn-secondary" data-action="create-nfse" @onclick="CreateNfseAsync">Create NFS-e Draft</button>
+                    }
+                    <a class="btn btn-secondary" href="/nfse/import?invoiceId=@Id" data-action="import-nfse">Import XML</a>
+                </div>
+            }
+        </div>
+        @if (nfses.Count == 0)
+        {
+            <p class="hint">No NFS-e linked to this invoice yet.@(report.Invoice.Status == InvoiceStatus.Paid ? "" : " A draft is created automatically when the invoice is marked as paid.")</p>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr><th>Number</th><th>Issued</th><th>Amount (BRL)</th><th>Rate</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var nfse in nfses)
+                    {
+                        <tr class="nfse-row">
+                            <td>@NfseLabels.Number(nfse)</td>
+                            <td>@(nfse.IssuedAt?.ToString("dd/MM/yyyy") ?? "—")</td>
+                            <td>@NfseLabels.Brl(nfse.AmountBrl)</td>
+                            <td>@(nfse.AmountBrl > 0 && report.Invoice.Total > 0 ? (nfse.AmountBrl / report.Invoice.Total).ToString("0.0000") : "—")</td>
+                            <td><NfseStatusBadge Status="nfse.Status" /></td>
+                            <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? "Edit" : "View")</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
     @if (!string.IsNullOrWhiteSpace(report.Invoice.PdfPath))
     {
         <p class="hint">Saved at: @report.Invoice.PdfPath</p>
@@ -52,6 +94,7 @@ else
     [SupplyParameterFromQuery] public string? Saved { get; set; }
 
     private InvoiceReportModel? report;
+    private List<Nfse> nfses = [];
     private bool notFound;
     private bool isError;
     private string? message;
@@ -61,6 +104,7 @@ else
     {
         report = await InvoiceService.GetReportModelAsync(Id);
         notFound = report is null;
+        nfses = await NfseService.GetForInvoiceAsync(Id);
         if (Saved is not null && message is null)
             message = Saved;
     }
@@ -88,6 +132,20 @@ else
         message = result.Message;
         warning = result.Warning;
         report = await InvoiceService.GetReportModelAsync(Id);
+        nfses = await NfseService.GetForInvoiceAsync(Id);
+    }
+
+    private async Task CreateNfseAsync()
+    {
+        var result = await NfseService.CreateDraftForInvoiceAsync(Id);
+        if (result.Success && result.NfseId is int nfseId)
+        {
+            Navigation.NavigateTo($"/nfse/{nfseId}?message={Uri.EscapeDataString(result.Message)}");
+            return;
+        }
+
+        isError = true;
+        message = result.Message;
     }
 
     private void OnDeleted(InvoiceActionResult result)

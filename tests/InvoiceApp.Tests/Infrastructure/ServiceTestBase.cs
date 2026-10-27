@@ -17,8 +17,13 @@ public abstract class ServiceTestBase : IDisposable
         return context;
     }
 
-    protected InvoiceService CreateInvoiceService() =>
-        new(NewContext(), Pdf, NullLogger<InvoiceService>.Instance);
+    protected InvoiceService CreateInvoiceService()
+    {
+        var context = NewContext();
+        return new InvoiceService(context, Pdf, new NfseService(context), NullLogger<InvoiceService>.Instance);
+    }
+
+    protected NfseService CreateNfseService() => new(NewContext());
 
     public void Dispose()
     {
