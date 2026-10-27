@@ -54,12 +54,27 @@ public class NfsePagesTests : ComponentTestBase
     // ---------- List ----------
 
     [Fact]
-    public void List_shows_notes_and_total_of_issued_only()
+    public void List_opens_filtered_by_issued()
     {
         Import(NfseFixtures.IssuedCanada, SeptemberInvoice(canada));
         CreateDraft(SeptemberInvoice(uk));
 
         var cut = Render<Index>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("tbody tr")));
+        Assert.Equal(nameof(NfseStatus.Issued), cut.Find("select").GetAttribute("value"));
+        Assert.Contains("SAMPLE CLIENT CANADA INC.", cut.Find("tbody tr").TextContent);
+        Assert.Contains("R$ 15.207,14", cut.Find("tfoot").TextContent);
+    }
+
+    [Fact]
+    public void List_all_shows_drafts_and_totals_issued_only()
+    {
+        Import(NfseFixtures.IssuedCanada, SeptemberInvoice(canada));
+        CreateDraft(SeptemberInvoice(uk));
+        var cut = Render<Index>();
+
+        cut.Find("select").Change("");
 
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("tbody tr").Count));
         Assert.Contains("R$ 15.207,14", cut.Find("tfoot").TextContent);
@@ -84,7 +99,7 @@ public class NfsePagesTests : ComponentTestBase
     {
         var cut = Render<Index>();
 
-        cut.WaitForAssertion(() => Assert.Contains("No NFS-e yet", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("No NFS-e with this status yet", cut.Markup));
     }
 
     // ---------- New ----------
