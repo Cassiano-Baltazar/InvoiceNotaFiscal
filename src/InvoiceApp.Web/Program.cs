@@ -19,7 +19,13 @@ Directory.CreateDirectory(dataDirectory);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite($"Data Source={Path.Combine(dataDirectory, "invoiceapp.db")}"));
 
+// The certificate password is encrypted with a key kept next to the database, never inside it.
+var certificateKeyPath = builder.Configuration.GetValue<string>("App:CertificateKeyPath")
+    ?? Path.Combine(dataDirectory, "certificate.key");
+builder.Services.AddSingleton<ISecretProtector>(AesSecretProtector.FromKeyFile(certificateKeyPath));
+
 builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
 builder.Services.AddScoped<INfseService, NfseService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();

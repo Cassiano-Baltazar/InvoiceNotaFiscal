@@ -20,6 +20,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("App:OpenBrowser", "false");
+        builder.UseSetting("App:CertificateKeyPath", Path.Combine(Path.GetTempPath(), "invoiceapp-tests", Guid.NewGuid().ToString("N"), "certificate.key"));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<AppDbContext>>();

@@ -149,6 +149,39 @@ public class SchemaUpgraderTests : IDisposable
         Assert.Equal(10.5m, (await check.Nfses.SingleAsync()).AmountBrl);
     }
 
+    // ---------- Digital certificate table ----------
+
+    [Fact]
+    public async Task Creates_certificate_table_matching_the_model_on_a_database_without_it()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        Execute("DROP TABLE \"DigitalCertificates\";");
+
+        using (var db = database.CreateContext())
+            await SchemaUpgrader.UpgradeAsync(db);
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "DigitalCertificates"), Columns(database.Connection, "DigitalCertificates"));
+    }
+
+    [Fact]
+    public async Task Upgraded_certificate_table_is_usable()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        Execute("DROP TABLE \"DigitalCertificates\";");
+        using (var db = database.CreateContext())
+            await SchemaUpgrader.UpgradeAsync(db);
+
+        using (var context = database.CreateContext())
+        {
+            context.DigitalCertificates.Add(new DigitalCertificate { FileName = "a.pfx", PfxData = [1, 2, 3], ProtectedPassword = "x", Subject = "S", Issuer = "I", Thumbprint = "T" });
+            await context.SaveChangesAsync();
+        }
+
+        using var check = database.CreateContext();
+        Assert.Equal([1, 2, 3], (await check.DigitalCertificates.SingleAsync()).PfxData);
+    }
+
     private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)
     {
         using var command = connection.CreateCommand();
