@@ -12,6 +12,26 @@ public static class SchemaUpgrader
     {
         await AddInvoiceItemsAsync(db, cancellationToken);
         await AddNfsesAsync(db, cancellationToken);
+        await AddDigitalCertificatesAsync(db, cancellationToken);
+    }
+
+    // v4: digital certificate (.pfx) used to sign and send NFS-e.
+    private static async Task AddDigitalCertificatesAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "DigitalCertificates" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_DigitalCertificates" PRIMARY KEY,
+                "FileName" TEXT NOT NULL,
+                "PfxData" BLOB NOT NULL,
+                "ProtectedPassword" TEXT NOT NULL,
+                "Subject" TEXT NOT NULL,
+                "Issuer" TEXT NOT NULL,
+                "Thumbprint" TEXT NOT NULL,
+                "ValidFrom" TEXT NOT NULL,
+                "ValidUntil" TEXT NOT NULL,
+                "UploadedAt" TEXT NOT NULL
+            );
+            """, cancellationToken);
     }
 
     // v3: NFS-e (Brazilian service invoices) linked to invoices.

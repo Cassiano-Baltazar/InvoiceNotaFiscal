@@ -384,3 +384,35 @@ select.input {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     margin-bottom: 16px;
 }
+
+.status-expired {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.certificate-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.certificate-info {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 16px 0;
+}
+
+.certificate-info dt {
+    color: var(--muted);
+}
+
+.certificate-info dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}

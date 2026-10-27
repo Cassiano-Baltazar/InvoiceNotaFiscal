@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<Nfse> Nfses => Set<Nfse>();
+    public DbSet<DigitalCertificate> DigitalCertificates => Set<DigitalCertificate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +20,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.LegalName).HasMaxLength(200);
             entity.Property(x => x.TradeName).HasMaxLength(100);
             entity.Property(x => x.OutputBasePath).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<DigitalCertificate>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.Property(x => x.FileName).HasMaxLength(260).IsRequired();
+            entity.Property(x => x.PfxData).IsRequired();
+            entity.Property(x => x.ProtectedPassword).IsRequired();
+            entity.Property(x => x.Subject).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Issuer).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Thumbprint).HasMaxLength(64).IsRequired();
         });
 
         modelBuilder.Entity<Client>(entity =>

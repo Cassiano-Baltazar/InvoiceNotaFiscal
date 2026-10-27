@@ -20,6 +20,8 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddDbContext<AppDbContext>(o => o.UseSqlite(Database.Connection));
         Services.AddScoped<IClientService, ClientService>();
         Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
+        Services.AddSingleton<ISecretProtector>(new AesSecretProtector(new byte[32]));
+        Services.AddScoped<ICertificateService, CertificateService>();
         Services.AddScoped<INfseService, NfseService>();
         Services.AddScoped<IInvoiceService, InvoiceService>();
         Services.AddSingleton<IPdfExportService>(Pdf);

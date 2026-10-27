@@ -59,6 +59,12 @@ The app does not issue NFS-e: notes are issued on the city hall portal (IPM / At
   Replaced (*substituída*) and cancelled notes are kept as history. The same XML cannot be imported twice
   (checked by the national access key, or by number and series). An invoice with an NFS-e cannot be deleted.
 - The original XML is stored with the note and shown on its page.
+- **Digital certificate:** **Settings > Digital Certificate (NFS-e)** stores the e-CNPJ A1 certificate (`.pfx`)
+  that will be used to issue NFS-e. The file is checked with its password (it must contain the private key) and
+  stored in the database, with holder, issuer and expiry date shown on the screen. The password is encrypted with
+  the key in `App_Data/certificate.key` (created on first run; another path can be set in `App:CertificateKeyPath`).
+  When moving the app to another machine, copy `certificate.key` together with the database; without it the
+  certificate has to be uploaded again.
 
 ## Tests
 

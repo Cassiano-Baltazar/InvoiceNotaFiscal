@@ -1,0 +1,142 @@
+@inject ICertificateService Certificates
+@inject IJSRuntime JS
+
+<section class="certificate-section">
+    <h2>Digital Certificate (NFS-e)</h2>
+    <p class="hint">The e-CNPJ A1 certificate (.pfx) used to issue NFS-e. The file is stored in the database, so it moves with it.
+        The password is encrypted with the key file <code>App_Data/certificate.key</code>: copy it together with the database when moving to another machine.</p>
+
+    @if (info is not null)
+    {
+        <dl class="certificate-info" data-field="certificate-info">
+            <dt>Holder</dt>
+            <dd>@info.Subject</dd>
+            <dt>Issued by</dt>
+            <dd>@info.Issuer</dd>
+            <dt>Valid until</dt>
+            <dd>
+                @info.ValidUntil.ToLocalTime().ToString("dd/MM/yyyy")
+                @if (info.IsExpired(DateTime.UtcNow))
+                {
+                    <span class="status-badge status-expired">Expired</span>
+                }
+                else if (info.DaysLeft(DateTime.UtcNow) <= 30)
+                {
+                    <span class="status-badge status-warning">@info.DaysLeft(DateTime.UtcNow) days left</span>
+                }
+            </dd>
+            <dt>File</dt>
+            <dd>@info.FileName (uploaded @info.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))</dd>
+            <dt>Thumbprint</dt>
+            <dd><code>@info.Thumbprint</code></dd>
+        </dl>
+
+        @if (!info.PasswordReadable)
+        {
+            <p class="message message-warning">@CertificateService.PasswordUnreadableMessage</p>
+        }
+    }
+    else
+    {
+        <p data-field="no-certificate">No certificate stored yet.</p>
+    }
+
+    <div class="form-grid">
+        <div class="form-field">
+            <label>@(info is null ? "Certificate file (.pfx)" : "Replace with a new file (.pfx)")</label>
+            <InputFile OnChange="OnFileSelectedAsync" accept=".pfx,.p12" class="input" data-field="certificate-file" />
+        </div>
+        <div class="form-field">
+            <label>Certificate password</label>
+            <input type="password" class="input" autocomplete="new-password" data-field="certificate-password"
+                   value="@password" @onchange="e => password = e.Value?.ToString() ?? string.Empty" />
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="message @(isError ? "message-error" : null)">@message</p>
+    }
+
+    <div class="actions-row">
+        <button class="btn btn-primary" type="button" data-action="save-certificate" disabled="@(fileData is null || busy)" @onclick="SaveAsync">Save Certificate</button>
+        @if (info is not null)
+        {
+            <button class="btn btn-danger" type="button" data-action="remove-certificate" disabled="@busy" @onclick="RemoveAsync">Remove Certificate</button>
+        }
+    </div>
+</section>
+
+@code {
+    private CertificateInfo? info;
+    private byte[]? fileData;
+    private string fileName = string.Empty;
+    private string password = string.Empty;
+    private string? message;
+    private bool isError;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        info = await Certificates.GetInfoAsync();
+    }
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        message = null;
+        fileData = null;
+        try
+        {
+            await using var stream = e.File.OpenReadStream(CertificateService.MaxFileSize);
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory);
+            fileData = memory.ToArray();
+            fileName = e.File.Name;
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Could not read the file: {ex.Message}");
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (fileData is null)
+            return;
+
+        busy = true;
+        try
+        {
+            info = await Certificates.SaveAsync(fileData, fileName, password);
+            fileData = null;
+            password = string.Empty;
+            isError = false;
+            message = "Certificate saved.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "Remove the digital certificate from the app? The app will not be able to issue NFS-e until a new one is uploaded."))
+            return;
+
+        await Certificates.RemoveAsync();
+        info = null;
+        isError = false;
+        message = "Certificate removed.";
+    }
+
+    private void ShowError(string text)
+    {
+        isError = true;
+        message = text;
+    }
+}
