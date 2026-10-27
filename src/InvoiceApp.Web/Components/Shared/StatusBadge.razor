@@ -1,0 +1,5 @@
+<span class="status-badge status-@Status.ToString().ToLowerInvariant()">@InvoiceRules.GetLabel(Status)</span>
+
+@code {
+    [Parameter] public InvoiceStatus Status { get; set; }
+}

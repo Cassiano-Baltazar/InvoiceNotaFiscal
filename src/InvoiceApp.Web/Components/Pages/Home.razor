@@ -1,0 +1,45 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IClientService ClientService
+@inject IInvoiceService InvoiceService
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <span>Active Clients</span>
+        <strong>@activeClients</strong>
+    </div>
+    <div class="stat-card">
+        <span>Total Invoices</span>
+        <strong>@totalInvoices</strong>
+    </div>
+    <div class="stat-card">
+        <span>This Month</span>
+        <strong>@thisMonthInvoices</strong>
+    </div>
+</div>
+
+<div class="actions-row">
+    <a class="btn btn-primary" href="/invoices/generate">Generate Invoices</a>
+    <a class="btn btn-secondary" href="/clients">Manage Clients</a>
+</div>
+
+@code {
+    private int activeClients;
+    private int totalInvoices;
+    private int thisMonthInvoices;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var clients = await ClientService.GetAllAsync();
+        activeClients = clients.Count(x => x.IsActive);
+
+        var now = DateTime.Now;
+        var invoices = await InvoiceService.GetInvoicesAsync(new());
+        totalInvoices = invoices.Count;
+        thisMonthInvoices = invoices.Count(x => x.IssueYear == now.Year && x.IssueMonth == now.Month);
+    }
+}

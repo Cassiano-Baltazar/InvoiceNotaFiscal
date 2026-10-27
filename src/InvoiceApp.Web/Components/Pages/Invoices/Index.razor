@@ -1,0 +1,169 @@
+@page "/invoices"
+@rendermode InteractiveServer
+@inject IInvoiceService InvoiceService
+@inject IClientService ClientService
+
+<PageTitle>Invoices</PageTitle>
+
+<div class="page-header">
+    <h1>Invoices</h1>
+    <a class="btn btn-primary" href="/invoices/generate">Generate Month</a>
+</div>
+
+<div class="filters">
+    <div class="form-field">
+        <label>Client</label>
+        <select class="input" @bind="filterClientId">
+            <option value="">All</option>
+            @foreach (var client in clients)
+            {
+                <option value="@client.Id">@client.Name</option>
+            }
+        </select>
+    </div>
+    <div class="form-field">
+        <label>Issue Year</label>
+        <InputNumber @bind-Value="filterIssueYear" class="input" />
+    </div>
+    <div class="form-field">
+        <label>Issue Month</label>
+        <InputNumber @bind-Value="filterIssueMonth" class="input" min="1" max="12" />
+    </div>
+    <div class="form-field">
+        <label>Service Year</label>
+        <InputNumber @bind-Value="filterServiceYear" class="input" />
+    </div>
+    <div class="form-field">
+        <label>Service Month</label>
+        <InputNumber @bind-Value="filterServiceMonth" class="input" min="1" max="12" />
+    </div>
+    <div class="form-field">
+        <label>Status</label>
+        <select class="input" @bind="filterStatus">
+            <option value="">All</option>
+            @foreach (var status in Enum.GetValues<InvoiceStatus>())
+            {
+                <option value="@status">@InvoiceRules.GetLabel(status)</option>
+            }
+        </select>
+    </div>
+    <div class="form-field">
+        <label>Search</label>
+        <InputText @bind-Value="filterSearch" class="input" placeholder="Invoice number or client" />
+    </div>
+    <div class="form-field actions-inline">
+        <button class="btn btn-secondary" @onclick="LoadAsync">Filter</button>
+        <button class="btn btn-secondary" @onclick="ClearFilters">Clear</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p class="message @(isError ? "message-error" : null)">@message</p>
+}
+
+@if (invoices is null)
+{
+    <p>Loading...</p>
+}
+else if (invoices.Count == 0)
+{
+    <p>No invoices found.</p>
+}
+else
+{
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Number</th>
+                <th>Client</th>
+                <th>Service</th>
+                <th>Issue</th>
+                <th>Amount</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var invoice in invoices)
+            {
+                <tr>
+                    <td>@invoice.InvoiceNumber</td>
+                    <td>@invoice.ClientName</td>
+                    <td>@invoice.ServiceMonth.ToString("D2")/@invoice.ServiceYear</td>
+                    <td>@invoice.IssueMonth.ToString("D2")/@invoice.IssueYear</td>
+                    <td>@invoice.Total.ToString("N2") @invoice.Currency</td>
+                    <td>@invoice.DueDate.ToString("yyyy-MM-dd")</td>
+                    <td><StatusBadge Status="invoice.Status" /></td>
+                    <td>
+                        <div class="row-actions">
+                            <a class="btn btn-secondary" href="/invoices/@invoice.Id">View</a>
+                            <InvoiceActions Invoice="invoice" Compact="true" OnChanged="OnActionAsync" OnDeleted="OnActionAsync" />
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Client> clients = [];
+    private List<Invoice>? invoices;
+
+    private string? filterClientId;
+    private int? filterIssueYear;
+    private int? filterIssueMonth;
+    private int? filterServiceYear;
+    private int? filterServiceMonth;
+    private string? filterStatus;
+    private string? filterSearch;
+    private string? message;
+    private bool isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clients = await ClientService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        InvoiceStatus? status = null;
+        if (!string.IsNullOrWhiteSpace(filterStatus) && Enum.TryParse<InvoiceStatus>(filterStatus, out var parsed))
+            status = parsed;
+
+        int? clientId = int.TryParse(filterClientId, out var id) ? id : null;
+
+        invoices = await InvoiceService.GetInvoicesAsync(new InvoiceFilterModel
+        {
+            ClientId = clientId,
+            IssueYear = filterIssueYear,
+            IssueMonth = filterIssueMonth,
+            ServiceYear = filterServiceYear,
+            ServiceMonth = filterServiceMonth,
+            Status = status,
+            Search = filterSearch
+        });
+    }
+
+    private async Task OnActionAsync(InvoiceActionResult result)
+    {
+        isError = !result.Success;
+        message = string.IsNullOrWhiteSpace(result.Warning) ? result.Message : $"{result.Message} {result.Warning}";
+        await LoadAsync();
+    }
+
+    private async Task ClearFilters()
+    {
+        filterClientId = null;
+        filterIssueYear = null;
+        filterIssueMonth = null;
+        filterServiceYear = null;
+        filterServiceMonth = null;
+        filterStatus = null;
+        filterSearch = null;
+        await LoadAsync();
+    }
+}

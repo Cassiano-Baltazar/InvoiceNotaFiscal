@@ -1,0 +1,97 @@
+@page "/invoices/{Id:int}"
+@rendermode InteractiveServer
+@inject IInvoiceService InvoiceService
+@inject NavigationManager Navigation
+
+<PageTitle>Invoice Details</PageTitle>
+
+@if (notFound)
+{
+    <p>Invoice not found.</p>
+    <a class="btn btn-secondary" href="/invoices">Back to Invoices</a>
+}
+else if (report is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>@report.Invoice.InvoiceNumber</h1>
+            <p>@report.Invoice.ClientName · <StatusBadge Status="report.Invoice.Status" /></p>
+        </div>
+        <div class="actions-row">
+            <a class="btn btn-primary" href="/api/invoices/@Id/pdf" target="_blank">Export PDF</a>
+            <button class="btn btn-secondary" @onclick="SavePdfAsync">Save PDF to Folder</button>
+        </div>
+    </div>
+
+    <InvoiceActions Invoice="report.Invoice" OnChanged="OnChangedAsync" OnDeleted="OnDeleted" />
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="message @(isError ? "message-error" : null)">@message</p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(warning))
+    {
+        <p class="message message-warning">@warning</p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(report.Invoice.PdfPath))
+    {
+        <p class="hint">Saved at: @report.Invoice.PdfPath</p>
+    }
+
+    <InvoiceReportView Model="report" />
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [SupplyParameterFromQuery] public string? Saved { get; set; }
+
+    private InvoiceReportModel? report;
+    private bool notFound;
+    private bool isError;
+    private string? message;
+    private string? warning;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        report = await InvoiceService.GetReportModelAsync(Id);
+        notFound = report is null;
+        if (Saved is not null && message is null)
+            message = Saved;
+    }
+
+    private async Task SavePdfAsync()
+    {
+        warning = null;
+        try
+        {
+            var path = await InvoiceService.SavePdfToDiskAsync(Id);
+            isError = false;
+            message = $"PDF saved to {path}";
+            report = await InvoiceService.GetReportModelAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = $"Failed to save PDF: {ex.Message}";
+        }
+    }
+
+    private async Task OnChangedAsync(InvoiceActionResult result)
+    {
+        isError = !result.Success;
+        message = result.Message;
+        warning = result.Warning;
+        report = await InvoiceService.GetReportModelAsync(Id);
+    }
+
+    private void OnDeleted(InvoiceActionResult result)
+    {
+        Navigation.NavigateTo("/invoices");
+    }
+}

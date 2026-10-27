@@ -1,0 +1,98 @@
+@page "/clients/new"
+@page "/clients/{Id:int}"
+@rendermode InteractiveServer
+@inject IClientService ClientService
+@inject NavigationManager Navigation
+
+<PageTitle>@Title</PageTitle>
+
+<h1>@Title</h1>
+
+<EditForm Model="model" OnValidSubmit="SaveAsync">
+    <DataAnnotationsValidator />
+
+    <div class="form-grid">
+        <div class="form-field">
+            <label>Name</label>
+            <InputText @bind-Value="model.Name" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Address Line 1</label>
+            <InputText @bind-Value="model.AddressLine1" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Address Line 2</label>
+            <InputText @bind-Value="model.AddressLine2" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Address Line 3</label>
+            <InputText @bind-Value="model.AddressLine3" class="input" />
+        </div>
+        <div class="form-field">
+            <label>City</label>
+            <InputText @bind-Value="model.City" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Region</label>
+            <InputText @bind-Value="model.Region" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Postal Code</label>
+            <InputText @bind-Value="model.PostalCode" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Country</label>
+            <InputText @bind-Value="model.Country" class="input" />
+        </div>
+        <div class="form-field">
+            <label>Currency</label>
+            <InputText @bind-Value="model.Currency" class="input" placeholder="CAD, GBP..." />
+        </div>
+        <div class="form-field">
+            <label>Currency Label</label>
+            <InputText @bind-Value="model.CurrencyLabel" class="input" placeholder="Canadian Dollars" />
+        </div>
+        <div class="form-field">
+            <label>Monthly Amount</label>
+            <InputNumber @bind-Value="model.MonthlyAmount" class="input" />
+        </div>
+        <div class="form-field full-width">
+            <label>Wise Payment Link</label>
+            <InputText @bind-Value="model.WisePaymentLink" class="input" />
+        </div>
+        <div class="form-field">
+            <label>
+                <InputCheckbox @bind-Value="model.IsActive" /> Active
+            </label>
+        </div>
+    </div>
+
+    <div class="actions-row">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-secondary" href="/clients">Cancel</a>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Client model = new();
+    private string Title => Id == 0 ? "New Client" : "Edit Client";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id == 0)
+        {
+            model = new Client { IsActive = true };
+            return;
+        }
+
+        model = await ClientService.GetAsync(Id) ?? new Client();
+    }
+
+    private async Task SaveAsync()
+    {
+        await ClientService.SaveAsync(model);
+        Navigation.NavigateTo("/clients");
+    }
+}

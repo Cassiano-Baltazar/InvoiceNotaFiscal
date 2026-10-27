@@ -1,0 +1,108 @@
+@page "/settings"
+@rendermode InteractiveServer
+@inject ICompanySettingsService SettingsService
+
+<PageTitle>Settings</PageTitle>
+
+<h1>Company Settings</h1>
+
+@if (model is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="SaveAsync">
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Legal Name</label>
+                <InputText @bind-Value="model.LegalName" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Trade Name</label>
+                <InputText @bind-Value="model.TradeName" class="input" />
+            </div>
+            <div class="form-field">
+                <label>CNPJ</label>
+                <InputText @bind-Value="model.Cnpj" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Address Line 1</label>
+                <InputText @bind-Value="model.AddressLine1" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Address Line 2</label>
+                <InputText @bind-Value="model.AddressLine2" class="input" />
+            </div>
+            <div class="form-field">
+                <label>City</label>
+                <InputText @bind-Value="model.City" class="input" />
+            </div>
+            <div class="form-field">
+                <label>State</label>
+                <InputText @bind-Value="model.State" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Postal Code</label>
+                <InputText @bind-Value="model.PostalCode" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Country</label>
+                <InputText @bind-Value="model.Country" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Phone</label>
+                <InputText @bind-Value="model.Phone" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Email</label>
+                <InputText @bind-Value="model.Email" class="input" />
+            </div>
+            <div class="form-field full-width">
+                <label>Output Base Path</label>
+                <InputText @bind-Value="model.OutputBasePath" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Issue Day</label>
+                <InputNumber @bind-Value="model.IssueDay" class="input" min="1" max="28" />
+            </div>
+            <div class="form-field">
+                <label>Payment Terms (days)</label>
+                <InputNumber @bind-Value="model.PaymentTermsDays" class="input" min="1" max="90" />
+            </div>
+            <div class="form-field full-width">
+                <label>Service Description Template</label>
+                <InputText @bind-Value="model.ServiceDescriptionTemplate" class="input" />
+                <small>Use {serviceMonth} placeholder, e.g. August 2026</small>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <p class="message">@message</p>
+        }
+
+        <div class="actions-row">
+            <button class="btn btn-primary" type="submit">Save Settings</button>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private CompanySettings? model;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await SettingsService.GetAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (model is null)
+            return;
+
+        await SettingsService.SaveAsync(model);
+        message = "Settings saved.";
+    }
+}

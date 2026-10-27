@@ -1,0 +1,74 @@
+@inject IInvoiceService InvoiceService
+@inject IJSRuntime JS
+
+<div class="actions-row invoice-actions @(Compact ? "compact" : null)">
+    @if (InvoiceRules.CanEdit(Invoice.Status))
+    {
+        <a class="btn btn-secondary" href="/invoices/@Invoice.Id/edit" data-action="edit">Edit</a>
+    }
+    @if (InvoiceRules.CanMarkAsSent(Invoice.Status))
+    {
+        <button class="btn btn-secondary" data-action="mark-sent" disabled="@isBusy" @onclick="MarkAsSentAsync">Mark as Sent</button>
+    }
+    @if (InvoiceRules.CanMarkAsPaid(Invoice.Status))
+    {
+        <button class="btn btn-success" data-action="mark-paid" disabled="@isBusy" @onclick="MarkAsPaidAsync">Mark as Paid</button>
+    }
+    @if (InvoiceRules.CanCancel(Invoice.Status))
+    {
+        <button class="btn btn-warning" data-action="cancel" disabled="@isBusy" @onclick="CancelAsync">Cancel Invoice</button>
+    }
+    @if (InvoiceRules.CanReactivate(Invoice.Status))
+    {
+        <button class="btn btn-secondary" data-action="reactivate" disabled="@isBusy" @onclick="ReactivateAsync">Reactivate</button>
+    }
+    @if (InvoiceRules.CanDelete(Invoice.Status))
+    {
+        <button class="btn btn-danger" data-action="delete" disabled="@isBusy" @onclick="DeleteAsync">Delete</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Invoice Invoice { get; set; } = null!;
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public EventCallback<InvoiceActionResult> OnChanged { get; set; }
+    [Parameter] public EventCallback<InvoiceActionResult> OnDeleted { get; set; }
+
+    private bool isBusy;
+
+    private Task MarkAsSentAsync() => RunAsync(() => InvoiceService.MarkAsSentAsync(Invoice.Id), OnChanged);
+
+    private Task MarkAsPaidAsync() => RunAsync(() => InvoiceService.MarkAsPaidAsync(Invoice.Id), OnChanged);
+
+    private Task ReactivateAsync() => RunAsync(() => InvoiceService.ReactivateAsync(Invoice.Id), OnChanged);
+
+    private async Task CancelAsync()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Cancel invoice {Invoice.InvoiceNumber}?"))
+            return;
+
+        await RunAsync(() => InvoiceService.CancelAsync(Invoice.Id), OnChanged);
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Delete invoice {Invoice.InvoiceNumber}? This cannot be undone."))
+            return;
+
+        await RunAsync(() => InvoiceService.DeleteAsync(Invoice.Id), OnDeleted);
+    }
+
+    private async Task RunAsync(Func<Task<InvoiceActionResult>> action, EventCallback<InvoiceActionResult> callback)
+    {
+        isBusy = true;
+        try
+        {
+            var result = await action();
+            await (result.Success ? callback : OnChanged).InvokeAsync(result);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+}

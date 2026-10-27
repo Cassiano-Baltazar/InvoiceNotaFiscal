@@ -1,0 +1,131 @@
+@using InvoiceApp.Web.Models
+@using InvoiceApp.Web.Services
+
+@code {
+    [Parameter, EditorRequired]
+    public InvoiceReportModel Model { get; set; } = default!;
+
+    private string GetServiceMonthLabel() =>
+        new DateOnly(Model.Invoice.ServiceYear, Model.Invoice.ServiceMonth, 1)
+            .ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+<div class="invoice-report">
+    <h1>INVOICE</h1>
+
+    <div class="invoice-grid">
+        <div class="invoice-card">
+            <strong>Invoice Details</strong>
+            <p><strong>Invoice No.:</strong> @Model.Invoice.InvoiceNumber</p>
+            <p><strong>Invoice Date:</strong> @Model.FormattedInvoiceDate</p>
+            <p><strong>Due Date:</strong> @Model.FormattedDueDate</p>
+            <p><strong>Currency:</strong> @Model.Invoice.Currency (@Model.Invoice.CurrencyLabel)</p>
+            <p><strong>Payment Terms:</strong> Net @Model.Company.PaymentTermsDays days</p>
+        </div>
+
+        <div class="invoice-card">
+            <strong>Bill From</strong>
+            <p><strong>@Model.Company.LegalName</strong></p>
+            <p><em>Trade name: @Model.Company.TradeName</em></p>
+            <p>@Model.Company.AddressLine1</p>
+            @if (!string.IsNullOrWhiteSpace(Model.Company.AddressLine2))
+            {
+                <p>@Model.Company.AddressLine2</p>
+            }
+            <p>@Model.Company.City, @Model.Company.State</p>
+            <p>@Model.Company.PostalCode</p>
+            <p>@Model.Company.Country</p>
+            <p><strong>CNPJ:</strong> @Model.Company.Cnpj</p>
+            <p><strong>Phone:</strong> @Model.Company.Phone</p>
+            <p><strong>Email:</strong> @Model.Company.Email</p>
+        </div>
+
+        <div class="invoice-card">
+            <strong>Bill To</strong>
+            <p><strong>@Model.Invoice.ClientName</strong></p>
+            @if (!string.IsNullOrWhiteSpace(Model.Invoice.ClientAddressLine1))
+            {
+                <p>@Model.Invoice.ClientAddressLine1</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Invoice.ClientAddressLine2))
+            {
+                <p>@Model.Invoice.ClientAddressLine2</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Invoice.ClientAddressLine3))
+            {
+                <p>@Model.Invoice.ClientAddressLine3</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Invoice.ClientCity) && !string.IsNullOrWhiteSpace(Model.Invoice.ClientRegion))
+            {
+                <p>@Model.Invoice.ClientCity, @Model.Invoice.ClientRegion</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Invoice.ClientPostalCode))
+            {
+                <p>@Model.Invoice.ClientPostalCode</p>
+            }
+            <p>@Model.Invoice.ClientCountry</p>
+        </div>
+    </div>
+
+    <hr />
+
+    <h2>Services</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Unit Price (@Model.Invoice.Currency)</th>
+                <th>Amount (@Model.Invoice.Currency)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Position</td>
+                    <td>@item.Description</td>
+                    <td>@InvoiceReportModel.FormatQuantity(item)</td>
+                    <td>@InvoiceReportModel.FormatAmount(item.UnitPrice)</td>
+                    <td><strong>@InvoiceReportModel.FormatAmount(item.Amount)</strong></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    <h2>Summary</h2>
+    <table class="data-table summary-table">
+        <tbody>
+            <tr><td>Subtotal</td><td>@Model.FormattedSubtotal</td></tr>
+            <tr><td>Tax</td><td>@Model.FormattedTax</td></tr>
+            <tr><td><strong>Total Due</strong></td><td><strong>@Model.FormattedTotal</strong></td></tr>
+        </tbody>
+    </table>
+
+    <hr />
+
+    <h2>Payment Information</h2>
+    <p><strong>Payment method:</strong> Wise</p>
+    <p><strong>Payment link (@Model.Invoice.Currency):</strong> <a href="@Model.Invoice.WisePaymentLink" target="_blank">@Model.Invoice.WisePaymentLink</a></p>
+    <p>When you open the link above, you will see two payment options:</p>
+    <p><strong>Option 1 — Pay with Wise</strong><br />Log in to your Wise account and complete the payment directly.</p>
+    <p><strong>Option 2 — Bank transfer</strong><br />Select <em>Bank transfer</em>. The page will then display the bank account details to complete the transfer from your bank.</p>
+    <p><strong>Important (bank transfer only):</strong> When paying by bank transfer, use the payment reference code shown on the Wise page and also include the invoice number <strong>@Model.Invoice.InvoiceNumber</strong> in your bank transfer reference/notes field.</p>
+
+    <hr />
+
+    <h2>Notes</h2>
+    <ul>
+        <li>Services rendered remotely from Brazil.</li>
+        <li>This invoice is issued for professional software development services performed in @GetServiceMonthLabel().</li>
+        <li>Payment is due within @Model.Company.PaymentTermsDays days of the invoice date.</li>
+    </ul>
+
+    <hr />
+
+    <p><strong>Thank you for your business.</strong></p>
+    <p>@Model.Company.LegalName</p>
+</div>

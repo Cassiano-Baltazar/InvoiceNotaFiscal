@@ -1,0 +1,119 @@
+@page "/invoices/generate"
+@rendermode InteractiveServer
+@inject IInvoiceService InvoiceService
+@inject IClientService ClientService
+
+<PageTitle>Generate Invoices</PageTitle>
+
+<h1>Generate Monthly Invoices</h1>
+
+<p>Creates one invoice per active client for the selected issue month. Service month will be the previous month.</p>
+
+<div class="form-grid narrow">
+    <div class="form-field">
+        <label>Issue Year</label>
+        <InputNumber @bind-Value="issueYear" class="input" />
+    </div>
+    <div class="form-field">
+        <label>Issue Month</label>
+        <InputNumber @bind-Value="issueMonth" class="input" min="1" max="12" />
+    </div>
+    <div class="form-field">
+        <label>
+            <InputCheckbox @bind-Value="exportPdf" /> Export PDF to output folder
+        </label>
+    </div>
+</div>
+
+<div class="preview-box">
+    <p><strong>Service month:</strong> @GetServiceMonthLabel()</p>
+    <p><strong>Active clients:</strong> @activeClients</p>
+    <p><strong>Invoice numbers:</strong> INV-@issueYear-@issueMonth.ToString("D2")-xxx</p>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p class="message">@message</p>
+}
+
+@if (errors.Count > 0)
+{
+    <ul class="errors">
+        @foreach (var error in errors)
+        {
+            <li>@error</li>
+        }
+    </ul>
+}
+
+@if (createdNumbers.Count > 0)
+{
+    <ul class="success-list">
+        @foreach (var number in createdNumbers)
+        {
+            <li>@number</li>
+        }
+    </ul>
+}
+
+<div class="actions-row">
+    <button class="btn btn-primary" @onclick="GenerateAsync" disabled="@isGenerating">
+        @(isGenerating ? "Generating..." : "Generate Invoices")
+    </button>
+    <a class="btn btn-secondary" href="/invoices">Back to Invoices</a>
+</div>
+
+@code {
+    private int issueYear = DateTime.Now.Year;
+    private int issueMonth = DateTime.Now.Month;
+    private bool exportPdf = true;
+    private int activeClients;
+    private bool isGenerating;
+    private string? message;
+    private readonly List<string> errors = [];
+    private readonly List<string> createdNumbers = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var clients = await ClientService.GetAllAsync();
+        activeClients = clients.Count(x => x.IsActive);
+    }
+
+    private string GetServiceMonthLabel()
+    {
+        var serviceDate = new DateOnly(issueYear, issueMonth, 1).AddMonths(-1);
+        return serviceDate.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private async Task GenerateAsync()
+    {
+        isGenerating = true;
+        message = null;
+        errors.Clear();
+        createdNumbers.Clear();
+
+        try
+        {
+            var result = await InvoiceService.GenerateMonthlyInvoicesAsync(new GenerateInvoicesRequest
+            {
+                IssueYear = issueYear,
+                IssueMonth = issueMonth,
+                ExportPdf = exportPdf
+            });
+
+            createdNumbers.AddRange(result.InvoiceNumbers);
+            errors.AddRange(result.Errors);
+            message = result.CreatedCount > 0
+                ? $"{result.CreatedCount} invoice(s) generated successfully."
+                : "No invoices were generated.";
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+}

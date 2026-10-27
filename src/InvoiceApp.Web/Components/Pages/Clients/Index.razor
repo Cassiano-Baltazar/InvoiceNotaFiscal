@@ -1,0 +1,57 @@
+@page "/clients"
+@rendermode InteractiveServer
+@inject IClientService ClientService
+@inject NavigationManager Navigation
+
+<PageTitle>Clients</PageTitle>
+
+<div class="page-header">
+    <h1>Clients</h1>
+    <a class="btn btn-primary" href="/clients/new">New Client</a>
+</div>
+
+@if (clients is null)
+{
+    <p>Loading...</p>
+}
+else if (clients.Count == 0)
+{
+    <p>No clients registered yet.</p>
+}
+else
+{
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Country</th>
+                <th>Currency</th>
+                <th>Monthly Amount</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var client in clients)
+            {
+                <tr>
+                    <td>@client.Name</td>
+                    <td>@client.Country</td>
+                    <td>@client.Currency</td>
+                    <td>@client.MonthlyAmount.ToString("N2")</td>
+                    <td>@(client.IsActive ? "Active" : "Inactive")</td>
+                    <td><a href="/clients/@client.Id">Edit</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Client>? clients;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clients = await ClientService.GetAllAsync();
+    }
+}

@@ -1,0 +1,159 @@
+@page "/invoices/{Id:int}/edit"
+@rendermode InteractiveServer
+@inject IInvoiceService InvoiceService
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Invoice</PageTitle>
+
+@if (invoice is null)
+{
+    <p>@(loaded ? "Invoice not found." : "Loading...")</p>
+}
+else if (!InvoiceRules.CanEdit(invoice.Status))
+{
+    <h1>@invoice.InvoiceNumber</h1>
+    <p class="message message-error">A @InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant() invoice cannot be edited.</p>
+    <a class="btn btn-secondary" href="/invoices/@Id">Back to Invoice</a>
+}
+else
+{
+    <h1>Edit @invoice.InvoiceNumber</h1>
+    <p>@invoice.ClientName · <StatusBadge Status="invoice.Status" /></p>
+
+    @if (invoice.Status == InvoiceStatus.Sent)
+    {
+        <p class="message message-warning">This invoice was already sent. Saving changes will set it back to Not Sent.</p>
+    }
+
+    <EditForm Model="model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Invoice Date</label>
+                <InputDate @bind-Value="model.InvoiceDate" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Due Date</label>
+                <InputDate @bind-Value="model.DueDate" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Currency</label>
+                <InputText @bind-Value="model.Currency" class="input" />
+            </div>
+            <div class="form-field">
+                <label>Currency Label</label>
+                <InputText @bind-Value="model.CurrencyLabel" class="input" />
+            </div>
+            <div class="form-field full-width">
+                <label>Wise Payment Link</label>
+                <InputText @bind-Value="model.WisePaymentLink" class="input" />
+            </div>
+        </div>
+
+        <h2>Items</h2>
+        <table class="data-table items-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Unit Price</th>
+                    <th>Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < model.Items.Count; i++)
+                {
+                    var item = model.Items[i];
+                    <tr class="item-row">
+                        <td>@(i + 1)</td>
+                        <td><InputText @bind-Value="item.Description" class="input item-description" /></td>
+                        <td><InputNumber @bind-Value="item.Quantity" class="input item-quantity" /></td>
+                        <td><InputText @bind-Value="item.Unit" class="input item-unit" placeholder="month, hour..." /></td>
+                        <td><InputNumber @bind-Value="item.UnitPrice" class="input item-price" /></td>
+                        <td class="item-amount">@item.Amount.ToString("N2")</td>
+                        <td>
+                            <button type="button" class="btn btn-secondary" data-action="remove-item"
+                                    disabled="@(model.Items.Count == 1)" @onclick="() => model.Items.Remove(item)">Remove</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="actions-row">
+            <button type="button" class="btn btn-secondary" data-action="add-item" @onclick="AddItem">Add Item</button>
+        </div>
+
+        <div class="form-grid narrow totals-grid">
+            <div class="form-field">
+                <label>Subtotal</label>
+                <input class="input" data-field="subtotal" value="@model.Subtotal.ToString("N2")" disabled />
+            </div>
+            <div class="form-field">
+                <label>Tax</label>
+                <InputNumber @bind-Value="model.Tax" class="input" data-field="tax" />
+            </div>
+            <div class="form-field">
+                <label>Total</label>
+                <input class="input" data-field="total" value="@model.Total.ToString("N2")" disabled />
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <p class="message message-error">@error</p>
+        }
+
+        <div class="actions-row">
+            <button class="btn btn-primary" type="submit" disabled="@isSaving">Save</button>
+            <a class="btn btn-secondary" href="/invoices/@Id">Back</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Invoice? invoice;
+    private InvoiceEditModel model = new();
+    private bool loaded;
+    private bool isSaving;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        invoice = await InvoiceService.GetInvoiceAsync(Id);
+        if (invoice is not null)
+            model = InvoiceEditModel.FromInvoice(invoice);
+        loaded = true;
+    }
+
+    private void AddItem() =>
+        model.Items.Add(new InvoiceItemEditModel { Quantity = 1, Unit = model.Items.LastOrDefault()?.Unit ?? string.Empty });
+
+    private async Task SaveAsync()
+    {
+        isSaving = true;
+        error = null;
+        try
+        {
+            var result = await InvoiceService.UpdateAsync(Id, model);
+            if (!result.Success)
+            {
+                error = result.Message;
+                return;
+            }
+
+            var text = string.IsNullOrWhiteSpace(result.Warning) ? result.Message : $"{result.Message} {result.Warning}";
+            Navigation.NavigateTo($"/invoices/{Id}?saved={Uri.EscapeDataString(text)}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

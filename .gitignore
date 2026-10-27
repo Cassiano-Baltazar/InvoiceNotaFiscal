@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+dist/
+publish/
+*.user
+.vs/
+.vscode/
+.idea/
+
+# Test results
+TestResults/
+*.trx
+
+# Local data (real company and client data lives only here)
+App_Data/
+*.db
+*.db-shm
+*.db-wal
+
+# OS
+Thumbs.db
+.DS_Store
