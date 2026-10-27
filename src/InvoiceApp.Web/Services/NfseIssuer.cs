@@ -94,6 +94,7 @@ public class NfseIssuer(
                 if (schemaErrors.Count > 0)
                     return await FailAsync(nfse, "The DPS does not match the official layout: " + string.Join(" ", schemaErrors), cancellationToken);
 
+                DpsXml.AdaptToServerLayout(document, environment);
                 var signed = DpsXml.Sign(document, certificate);
                 var result = await api.SendDpsAsync(environment, certificate, signed, cancellationToken);
                 if (!result.Issued)

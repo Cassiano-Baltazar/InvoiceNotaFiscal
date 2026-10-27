@@ -112,6 +112,34 @@ public class DpsXmlTests
         Assert.Equal("Invoice INV-2026-11-001 - GBP 1,000.00", Value(dps, "xInfComp"));
     }
 
+    private static string[] Children(XmlDocument document, string parent) =>
+        document.GetElementsByTagName(parent, Ns)[0]!.ChildNodes.OfType<XmlElement>().Select(x => x.LocalName).ToArray();
+
+    [Fact]
+    public void Restricted_production_gets_the_nt009_layout()
+    {
+        var dps = Build();
+
+        DpsXml.AdaptToServerLayout(dps, NfseEnvironment.RestrictedProduction);
+
+        Assert.Equal(["tpAmb", "dhEmi", "verAplic", "serie", "nDPS", "dCompet", "tpEmit", "finNFSe", "cLocEmi", "prest", "toma", "serv", "valores"],
+            Children(dps, "infDPS"));
+        Assert.Equal("0", Value(dps, "finNFSe"));
+        Assert.Equal(["cTribNac", "cNBS", "xDescServ"], Children(dps, "cServ"));
+    }
+
+    [Fact]
+    public void Production_keeps_the_v101_layout()
+    {
+        var dps = Build();
+
+        DpsXml.AdaptToServerLayout(dps, NfseEnvironment.Production);
+
+        Assert.False(Has(dps, "finNFSe"));
+        Assert.Equal(["cTribNac", "xDescServ", "cNBS"], Children(dps, "cServ"));
+        Assert.Empty(DpsXml.Validate(dps));
+    }
+
     [Fact]
     public void Municipal_registration_is_sent_when_filled_in()
     {

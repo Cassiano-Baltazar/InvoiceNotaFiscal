@@ -218,6 +218,26 @@ public static partial class DpsXml
     private static readonly Lazy<XmlSchemaSet> Schemas = new(LoadSchemas);
 
     /// <summary>Validates against the official XSD (layout 1.01). Returns the errors found.</summary>
+    /// <summary>
+    /// The restricted production environment validates the DPS with the layout of NT 009 (release 1) since 15/10/2026,
+    /// which has no published schema yet: finNFSe moves into infDPS (required) and cNBS comes before xDescServ.
+    /// Production still uses the v1.01 schema. Apply this after <see cref="Validate"/> and before signing.
+    /// </summary>
+    public static void AdaptToServerLayout(XmlDocument document, NfseEnvironment environment)
+    {
+        if (environment != NfseEnvironment.RestrictedProduction)
+            return;
+
+        var tpEmit = document.GetElementsByTagName("tpEmit", Namespace)[0]!;
+        XmlNode after = tpEmit.NextSibling is XmlElement { LocalName: "cMotivoEmisTI" } reason ? reason : tpEmit;
+        var finNFSe = document.CreateElement("finNFSe", Namespace);
+        finNFSe.InnerText = "0"; // regular note
+        after.ParentNode!.InsertAfter(finNFSe, after);
+
+        var description = document.GetElementsByTagName("xDescServ", Namespace)[0]!;
+        description.ParentNode!.AppendChild(description);
+    }
+
     public static List<string> Validate(XmlDocument document)
     {
         var errors = new List<string>();
