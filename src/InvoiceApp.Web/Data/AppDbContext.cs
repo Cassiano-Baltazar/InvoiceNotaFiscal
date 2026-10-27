@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.MunicipalityCode).HasMaxLength(7);
             entity.Property(x => x.DpsSeries).HasMaxLength(5);
             entity.Property(x => x.DefaultNationalTaxCode).HasMaxLength(6);
+            entity.Property(x => x.MunicipalRegistration).HasMaxLength(15);
             entity.Property(x => x.SimplesNacionalTaxRate).HasPrecision(5, 2);
         });
 

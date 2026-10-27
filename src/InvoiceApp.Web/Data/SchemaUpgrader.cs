@@ -26,6 +26,7 @@ public static class SchemaUpgrader
         await AddColumnAsync(db, "CompanySettings", "NextDpsNumber", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
         await AddColumnAsync(db, "CompanySettings", "DefaultNationalTaxCode", "TEXT NOT NULL DEFAULT '010101'", cancellationToken);
         await AddColumnAsync(db, "CompanySettings", "SimplesNacionalTaxRate", "TEXT NOT NULL DEFAULT '0.0'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "MunicipalRegistration", "TEXT NULL", cancellationToken);
 
         await AddColumnAsync(db, "Nfses", "NationalTaxCode", "TEXT NULL", cancellationToken);
         await AddColumnAsync(db, "Nfses", "DpsSeries", "TEXT NULL", cancellationToken);

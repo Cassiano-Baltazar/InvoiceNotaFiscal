@@ -50,8 +50,8 @@ public class DpsXmlTests
 
     private static readonly DateTimeOffset Now = new(2026, 11, 3, 13, 0, 0, TimeSpan.Zero);
 
-    private static XmlDocument Build(Nfse? nfse = null, Client? client = null, long number = 42) =>
-        DpsXml.Build(new DpsData(nfse ?? Draft(), client ?? UkClient(), Company(), NfseEnvironment.RestrictedProduction, "1", number, Now));
+    private static XmlDocument Build(Nfse? nfse = null, Client? client = null, long number = 42, CompanySettings? company = null) =>
+        DpsXml.Build(new DpsData(nfse ?? Draft(), client ?? UkClient(), company ?? Company(), NfseEnvironment.RestrictedProduction, "1", number, Now));
 
     private static string Value(XmlDocument document, string name) =>
         document.GetElementsByTagName(name, Ns)[0]?.InnerText ?? throw new Xunit.Sdk.XunitException($"<{name}> not found");
@@ -93,6 +93,9 @@ public class DpsXmlTests
         Assert.Equal("2026-10-31", Value(dps, "dCompet"));
         Assert.Equal("11222333000144", Value(dps, "CNPJ"));
         Assert.Equal("3", Value(dps, "opSimpNac"));
+        Assert.False(Has(dps, "IM"));
+        Assert.Equal("GB", Value(dps, "cPaisPrestacao"));
+        Assert.False(Has(dps, "cLocPrestacao"));
         Assert.Equal("12345678", Value(dps, "NIF"));
         Assert.Equal("SAMPLE CLIENT UK LTD", Value(dps, "xNome"));
         Assert.Equal("010101", Value(dps, "cTribNac"));
@@ -107,6 +110,18 @@ public class DpsXmlTests
         Assert.False(Has(dps, "pAliq"));
         Assert.Equal("6.00", Value(dps, "pTotTribSN"));
         Assert.Equal("Invoice INV-2026-11-001 - GBP 1,000.00", Value(dps, "xInfComp"));
+    }
+
+    [Fact]
+    public void Municipal_registration_is_sent_when_filled_in()
+    {
+        var company = Company();
+        company.MunicipalRegistration = " 35165 ";
+
+        var dps = Build(company: company);
+
+        Assert.Equal("35165", Value(dps, "IM"));
+        Assert.Empty(DpsXml.Validate(dps));
     }
 
     [Fact]

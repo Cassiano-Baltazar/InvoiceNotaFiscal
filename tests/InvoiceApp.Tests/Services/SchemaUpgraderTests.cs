@@ -245,7 +245,7 @@ public class SchemaUpgraderTests : IDisposable
     private void DropNationalApiColumns()
     {
         Execute("DROP INDEX \"IX_Nfses_DpsId\";");
-        foreach (var column in new[] { "NfseEnvironment", "MunicipalityCode", "DpsSeries", "NextDpsNumber", "DefaultNationalTaxCode", "SimplesNacionalTaxRate" })
+        foreach (var column in new[] { "NfseEnvironment", "MunicipalityCode", "DpsSeries", "NextDpsNumber", "DefaultNationalTaxCode", "SimplesNacionalTaxRate", "MunicipalRegistration" })
             Execute($"ALTER TABLE \"CompanySettings\" DROP COLUMN \"{column}\";");
         foreach (var column in new[] { "NationalTaxCode", "DpsSeries", "DpsNumber", "DpsId", "DpsEnvironment", "IssueError" })
             Execute($"ALTER TABLE \"Nfses\" DROP COLUMN \"{column}\";");

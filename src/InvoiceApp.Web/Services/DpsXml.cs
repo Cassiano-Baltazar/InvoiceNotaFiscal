@@ -108,14 +108,16 @@ public static partial class DpsXml
             // Name and address of the provider come from the CNPJ registration; the API rejects them when sent.
             new XElement(Ns + "prest",
                 new XElement(Ns + "CNPJ", cnpj),
+                string.IsNullOrWhiteSpace(company.MunicipalRegistration) ? null : new XElement(Ns + "IM", company.MunicipalRegistration.Trim()),
                 new XElement(Ns + "regTrib",
                     new XElement(Ns + "opSimpNac", 3),
                     new XElement(Ns + "regApTribSN", 1),
                     new XElement(Ns + "regEspTrib", 0))),
             Taker(nfse, data.Client),
             new XElement(Ns + "serv",
+                // Exported service: the place is the taker's country, as in the notes Guaíba sends to the national system.
                 new XElement(Ns + "locPrest",
-                    new XElement(Ns + "cLocPrestacao", company.MunicipalityCode)),
+                    new XElement(Ns + "cPaisPrestacao", nfse.TakerCountryCode!.ToUpperInvariant())),
                 new XElement(Ns + "cServ",
                     new XElement(Ns + "cTribNac", nfse.NationalTaxCode),
                     new XElement(Ns + "xDescServ", Cut(nfse.Description, 2000)),

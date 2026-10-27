@@ -26,6 +26,7 @@ public class CompanySettings
     public long NextDpsNumber { get; set; } = 1;
     public string DefaultNationalTaxCode { get; set; } = "010101";
     public decimal SimplesNacionalTaxRate { get; set; }
+    public string? MunicipalRegistration { get; set; }
 }
 
 /// <summary>Environment of the national NFS-e API. Values are the tpAmb codes of the DPS.</summary>
