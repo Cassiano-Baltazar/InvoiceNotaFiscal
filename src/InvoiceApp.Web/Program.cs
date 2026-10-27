@@ -21,6 +21,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
+builder.Services.AddScoped<INfseService, NfseService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddSingleton<IPdfExportService, PdfExportService>();
 

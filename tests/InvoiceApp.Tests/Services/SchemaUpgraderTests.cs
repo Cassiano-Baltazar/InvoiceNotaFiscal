@@ -1,5 +1,6 @@
 using InvoiceApp.Tests.Infrastructure;
 using InvoiceApp.Web.Data;
+using InvoiceApp.Web.Data.Entities;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -112,6 +113,52 @@ public class SchemaUpgraderTests : IDisposable
 
         using var check = database.CreateContext();
         Assert.Single(check.InvoiceItems);
+    }
+
+    // ---------- NFS-e table ----------
+
+    [Fact]
+    public async Task Creates_nfse_table_matching_the_model_on_a_database_without_it()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        Execute("DROP TABLE \"Nfses\";");
+
+        using (var db = database.CreateContext())
+            await SchemaUpgrader.UpgradeAsync(db);
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "Nfses"), Columns(database.Connection, "Nfses"));
+        Assert.Equal(Indexes(fresh.Connection, "Nfses"), Indexes(database.Connection, "Nfses"));
+    }
+
+    [Fact]
+    public async Task Upgraded_nfse_table_is_usable_and_blocks_deleting_the_invoice()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        Execute("DROP TABLE \"Nfses\";");
+        using (var db = database.CreateContext())
+            await SchemaUpgrader.UpgradeAsync(db);
+
+        using var context = database.CreateContext();
+        var invoice = await context.Invoices.SingleAsync();
+        context.Nfses.Add(new Nfse { InvoiceId = invoice.Id, TakerName = "X", Description = "Y", AmountBrl = 10.5m });
+        await context.SaveChangesAsync();
+
+        Assert.Throws<SqliteException>(() => Execute($"DELETE FROM \"Invoices\" WHERE \"Id\" = {invoice.Id};"));
+        using var check = database.CreateContext();
+        Assert.Equal(10.5m, (await check.Nfses.SingleAsync()).AmountBrl);
+    }
+
+    private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA index_list(\"{table}\");";
+        using var reader = command.ExecuteReader();
+        var indexes = new List<(string, bool)>();
+        while (reader.Read())
+            if (!reader.GetString(1).StartsWith("sqlite_"))
+                indexes.Add((reader.GetString(1), reader.GetInt32(2) == 1));
+        return indexes.OrderBy(x => x.Item1).ToList();
     }
 
     public void Dispose() => database.Dispose();

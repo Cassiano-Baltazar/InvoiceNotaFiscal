@@ -82,6 +82,7 @@ else
                 <th>Amount</th>
                 <th>Due Date</th>
                 <th>Status</th>
+                <th>NFS-e</th>
                 <th></th>
             </tr>
         </thead>
@@ -96,6 +97,20 @@ else
                     <td>@invoice.Total.ToString("N2") @invoice.Currency</td>
                     <td>@invoice.DueDate.ToString("yyyy-MM-dd")</td>
                     <td><StatusBadge Status="invoice.Status" /></td>
+                    <td class="nfse-cell">
+                        @{
+                            var current = invoice.Nfses.FirstOrDefault(n => n.Status == NfseStatus.Issued)
+                                ?? invoice.Nfses.FirstOrDefault(n => n.Status == NfseStatus.Draft);
+                        }
+                        @if (current is not null)
+                        {
+                            <a href="/nfse/@current.Id">@(current.Status == NfseStatus.Draft ? "Draft" : "nº " + current.Number)</a>
+                        }
+                        else
+                        {
+                            <span class="hint">—</span>
+                        }
+                    </td>
                     <td>
                         <div class="row-actions">
                             <a class="btn btn-secondary" href="/invoices/@invoice.Id">View</a>

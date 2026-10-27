@@ -25,12 +25,14 @@ public interface IInvoiceService
 public class InvoiceService(
     AppDbContext db,
     IPdfExportService pdfExportService,
+    INfseService nfseService,
     ILogger<InvoiceService> logger) : IInvoiceService
 {
     public async Task<List<Invoice>> GetInvoicesAsync(InvoiceFilterModel filter, CancellationToken cancellationToken = default)
     {
         var query = db.Invoices
             .Include(x => x.Client)
+            .Include(x => x.Nfses)
             .AsQueryable();
 
         if (filter.ClientId is int clientId)
@@ -269,6 +271,9 @@ public class InvoiceService(
         if (!InvoiceRules.CanDelete(invoice.Status))
             return InvoiceActionResult.Fail($"A {InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()} invoice cannot be deleted.");
 
+        if (await db.Nfses.AnyAsync(x => x.InvoiceId == id, cancellationToken))
+            return InvoiceActionResult.Fail($"Invoice {invoice.InvoiceNumber} has an NFS-e linked. Delete the NFS-e first.");
+
         string? warning = null;
         if (!string.IsNullOrWhiteSpace(invoice.PdfPath) && File.Exists(invoice.PdfPath))
         {
@@ -297,8 +302,18 @@ public class InvoiceService(
     public Task<InvoiceActionResult> MarkAsSentAsync(int id, CancellationToken cancellationToken = default) =>
         ChangeStatusAsync(id, InvoiceRules.CanMarkAsSent, InvoiceStatus.Sent, "marked as sent", cancellationToken);
 
-    public Task<InvoiceActionResult> MarkAsPaidAsync(int id, CancellationToken cancellationToken = default) =>
-        ChangeStatusAsync(id, InvoiceRules.CanMarkAsPaid, InvoiceStatus.Paid, "marked as paid", cancellationToken);
+    public async Task<InvoiceActionResult> MarkAsPaidAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var result = await ChangeStatusAsync(id, InvoiceRules.CanMarkAsPaid, InvoiceStatus.Paid, "marked as paid", cancellationToken);
+        if (!result.Success)
+            return result;
+
+        // A paid invoice needs an NFS-e: prepare the draft (or keep the one already linked).
+        var nfse = await nfseService.CreateDraftForInvoiceAsync(id, cancellationToken);
+        return nfse.Success
+            ? InvoiceActionResult.Ok($"{result.Message} {nfse.Message}")
+            : InvoiceActionResult.Ok(result.Message, $"The NFS-e draft could not be created: {nfse.Message}");
+    }
 
     private async Task<InvoiceActionResult> ChangeStatusAsync(
         int id,

@@ -62,6 +62,9 @@ public class AppEndpointTests : IClassFixture<AppFactory>
     [InlineData("/invoices", "Invoices")]
     [InlineData("/invoices/generate", "Generate Monthly Invoices")]
     [InlineData("/settings", "Company Settings")]
+    [InlineData("/nfse", "NFS-e")]
+    [InlineData("/nfse/new", "New NFS-e Draft")]
+    [InlineData("/nfse/import", "Import NFS-e XML")]
     public async Task Pages_render(string url, string expectedText)
     {
         var response = await client.GetAsync(url);

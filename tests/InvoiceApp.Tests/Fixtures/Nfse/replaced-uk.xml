@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<nfse>
+	<nf>
+		<numero_nfse>1</numero_nfse>
+		<serie_nfse>1</serie_nfse>
+		<data_nfse>08/10/2026</data_nfse>
+		<data_fato>08/10/2026</data_fato>
+		<hora_nfse>10:52:50</hora_nfse>
+		<situacao_codigo_nfse>3</situacao_codigo_nfse>
+		<situacao_descricao_nfse>Substituída</situacao_descricao_nfse>
+		<link_nfse>https://nfse-example.atende.net/autoatendimento/servicos/consulta-de-autenticidade-de-nota-fiscal-eletronica-nfse/detalhar/1/identificador/0000000000000000000000000000000000000001</link_nfse>
+		<cod_verificador_autenticidade>0000000000000000000000000000000000000001</cod_verificador_autenticidade>
+		<chave_acesso_nfse_nacional>43093081211222333000144000000000000126100000000013</chave_acesso_nfse_nacional>
+		<valor_total>6.858,05</valor_total>
+		<valor_desconto>0,00</valor_desconto>
+		<valor_ir>0,00</valor_ir>
+		<valor_inss>0,00</valor_inss>
+		<valor_contribuicao_social>0,00</valor_contribuicao_social>
+		<valor_rps>0,00</valor_rps>
+		<valor_pis>0,00</valor_pis>
+		<valor_cofins>0,00</valor_cofins>
+		<observacao>0</observacao>
+	</nf>
+	<prestador>
+		<cpfcnpj>11222333000144</cpfcnpj>
+		<cidade>8685</cidade>
+	</prestador>
+	<tomador>
+		<tipo>E</tipo>
+		<cpfcnpj>0</cpfcnpj>
+		<ie></ie>
+		<sobrenome_nome_fantasia>SAMPLE CLIENT UK LTD</sobrenome_nome_fantasia>
+		<nome_razao_social>SAMPLE CLIENT UK LTD</nome_razao_social>
+		<numero_residencia>100</numero_residencia>
+		<complemento></complemento>
+		<ponto_referencia>0</ponto_referencia>
+		<pais>Estados Unidos da América</pais>
+		<siglaPais>US</siglaPais>
+		<codigoIbgePais>2496</codigoIbgePais>
+		<estado>JH</estado>
+		<cidade>Example City</cidade>
+		<logradouro>Example Street</logradouro>
+		<bairro>Example District</bairro>
+		<cep>00000</cep>
+		<ddd_fone_residencial>0</ddd_fone_residencial>
+		<ddd_fone_comercial>0</ddd_fone_comercial>
+		<fone_residencial></fone_residencial>
+		<fone_comercial>0</fone_comercial>
+		<ddd_fax>0</ddd_fax>
+		<fone_fax>0</fone_fax>
+		<email></email>
+	</tomador>
+	<itens>
+		<lista>
+			<codigo_local_prestacao_servico>99999</codigo_local_prestacao_servico>
+			<codigo_pais_prestacao_servico>2496</codigo_pais_prestacao_servico>
+			<codigo_atividade>620230000</codigo_atividade>
+			<codigo_item_lista_servico>10101</codigo_item_lista_servico>
+			<codigo_nbs>115029000</codigo_nbs>
+			<descritivo>Software development services - September 2026 - GBP 1,000.00</descritivo>
+			<aliquota_item_lista_servico>2,0100</aliquota_item_lista_servico>
+			<situacao_tributaria>14</situacao_tributaria>
+			<valor_tributavel>6.858,05</valor_tributavel>
+			<valor_deducao>0,00</valor_deducao>
+			<valor_issrf>0,00</valor_issrf>
+			<unidade_codigo>6</unidade_codigo>
+			<unidade_quantidade>1,00</unidade_quantidade>
+			<unidade_valor_unitario>6.858,0500</unidade_valor_unitario>
+			<tributa_municipio_prestador>N</tributa_municipio_prestador>
+			<tributa_municipio_tomador>N</tributa_municipio_tomador>
+		</lista>
+	</itens>
+</nfse>

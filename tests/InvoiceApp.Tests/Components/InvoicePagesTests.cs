@@ -98,7 +98,7 @@ public class InvoicePagesTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.Contains(invoice.InvoiceNumber, cut.Find("h1").TextContent));
         Assert.Contains("Not Sent", cut.Find(".status-badge").TextContent);
-        Assert.Equal(5, cut.FindAll("[data-action]").Count);
+        Assert.Equal(5, cut.FindAll(".invoice-actions [data-action]").Count);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class InvoicePagesTests : ComponentTestBase
 
         var cut = Render<Detail>(p => p.Add(x => x.Id, invoice.Id));
 
-        Assert.Empty(cut.FindAll("[data-action]"));
+        Assert.Empty(cut.FindAll(".invoice-actions [data-action]"));
     }
 
     [Fact]
@@ -120,7 +120,8 @@ public class InvoicePagesTests : ComponentTestBase
         cut.Find("[data-action=mark-paid]").Click();
 
         cut.WaitForAssertion(() => Assert.Contains("Paid", cut.Find(".status-badge").TextContent));
-        Assert.Empty(cut.FindAll("[data-action]"));
+        Assert.Empty(cut.FindAll(".invoice-actions [data-action]"));
+        cut.WaitForAssertion(() => Assert.Contains("Draft", cut.Find(".nfse-section").TextContent));
     }
 
     [Fact]

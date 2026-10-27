@@ -1,0 +1,178 @@
+@page "/nfse/import"
+@rendermode InteractiveServer
+@inject INfseService NfseService
+
+<PageTitle>Import NFS-e XML</PageTitle>
+
+<h1>Import NFS-e XML</h1>
+
+<p>Select the XML files downloaded from the city hall portal (you can select every file of the NFSe folder at once).
+    For each note, choose the invoice it belongs to. A suggestion is made from the client name and the service month.</p>
+
+<div class="form-field">
+    <InputFile OnChange="OnFilesSelectedAsync" multiple accept=".xml" class="input" data-field="xml-files" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p class="message @(isError ? "message-error" : null)">@message</p>
+}
+
+@if (rows.Count > 0)
+{
+    <table class="data-table import-table">
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>NFS-e</th>
+                <th>Issued</th>
+                <th>Taker</th>
+                <th>Description</th>
+                <th>Amount (BRL)</th>
+                <th>Status</th>
+                <th>Invoice</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in rows)
+            {
+                <tr class="import-row">
+                    <td>@row.Preview.FileName</td>
+                    @if (row.Preview.Data is { } data)
+                    {
+                        <td>@data.Number@(string.IsNullOrWhiteSpace(data.Series) ? "" : "/" + data.Series)</td>
+                        <td>@data.IssuedAt?.ToString("dd/MM/yyyy")</td>
+                        <td>@data.TakerName</td>
+                        <td>
+                            @data.Description
+                            @if (!string.IsNullOrWhiteSpace(data.Notes))
+                            {
+                                <div class="hint">@data.Notes</div>
+                            }
+                        </td>
+                        <td>@NfseLabels.Brl(data.AmountBrl)</td>
+                        <td><NfseStatusBadge Status="data.Status" /></td>
+                        <td>
+                            @if (row.Preview.CanImport && row.Result is null)
+                            {
+                                <select class="input invoice-select" @bind="row.InvoiceId">
+                                    <option value="0">Select an invoice...</option>
+                                    @foreach (var option in options)
+                                    {
+                                        <option value="@option.Id">@option.Label</option>
+                                    }
+                                </select>
+                                @if (row.Preview.SuggestedInvoiceId is not null && row.InvoiceId == row.Preview.SuggestedInvoiceId)
+                                {
+                                    <div class="hint">Suggested</div>
+                                }
+                            }
+                            else if (row.Preview.AlreadyImported is { } existing)
+                            {
+                                <span>Already imported (<a href="/invoices/@existing.InvoiceId">@existing.Invoice.InvoiceNumber</a>)</span>
+                            }
+                        </td>
+                    }
+                    else
+                    {
+                        <td colspan="7" class="errors">@row.Preview.Error</td>
+                    }
+                    <td class="import-result">
+                        @if (row.Result is { } result)
+                        {
+                            <span class="@(result.Success ? "success-list" : "errors")">@result.Message</span>
+                            @foreach (var warning in result.Warnings)
+                            {
+                                <div class="hint">@warning</div>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="actions-row">
+        <button class="btn btn-primary" data-action="import" disabled="@(!rows.Any(r => r.IsReady) || isImporting)" @onclick="ImportAsync">
+            Import @rows.Count(r => r.IsReady) NFS-e
+        </button>
+        <a class="btn btn-secondary" href="/nfse">Back to NFS-e</a>
+    </div>
+}
+
+@code {
+    private const long MaxFileSize = 2 * 1024 * 1024;
+
+    [SupplyParameterFromQuery] public int? InvoiceId { get; set; }
+
+    private List<InvoiceOption> options = [];
+    private readonly List<ImportRow> rows = [];
+    private bool isImporting;
+    private bool isError;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        options = await NfseService.GetInvoiceOptionsAsync();
+    }
+
+    private async Task OnFilesSelectedAsync(InputFileChangeEventArgs e)
+    {
+        rows.Clear();
+        message = null;
+
+        foreach (var file in e.GetMultipleFiles(100))
+        {
+            byte[] content;
+            try
+            {
+                await using var stream = file.OpenReadStream(MaxFileSize);
+                using var memory = new MemoryStream();
+                await stream.CopyToAsync(memory);
+                content = memory.ToArray();
+            }
+            catch (Exception ex)
+            {
+                rows.Add(new ImportRow(new NfseImportPreview { FileName = file.Name, Error = $"Could not read the file: {ex.Message}" }));
+                continue;
+            }
+
+            await AddPreviewAsync(file.Name, content);
+        }
+    }
+
+    private async Task AddPreviewAsync(string fileName, byte[] content)
+    {
+        var preview = await NfseService.PreviewImportAsync(fileName, content);
+        rows.Add(new ImportRow(preview) { InvoiceId = InvoiceId ?? preview.SuggestedInvoiceId ?? 0 });
+        StateHasChanged();
+    }
+
+    private async Task ImportAsync()
+    {
+        isImporting = true;
+        try
+        {
+            foreach (var row in rows.Where(r => r.IsReady).ToList())
+                row.Result = await NfseService.ImportAsync(row.Preview.FileName, row.Preview.Content, row.InvoiceId);
+
+            var imported = rows.Count(r => r.Result?.Success == true);
+            var failed = rows.Count(r => r.Result?.Success == false);
+            isError = failed > 0;
+            message = failed > 0 ? $"{imported} imported, {failed} with errors." : $"{imported} NFS-e imported.";
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    private sealed class ImportRow(NfseImportPreview preview)
+    {
+        public NfseImportPreview Preview { get; } = preview;
+        public int InvoiceId { get; set; }
+        public NfseActionResult? Result { get; set; }
+        public bool IsReady => Preview.CanImport && InvoiceId > 0 && Result is null;
+    }
+}

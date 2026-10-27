@@ -1,0 +1,5 @@
+<span class="status-badge nfse-@Status.ToString().ToLowerInvariant()">@NfseLabels.Status(Status)</span>
+
+@code {
+    [Parameter] public NfseStatus Status { get; set; }
+}

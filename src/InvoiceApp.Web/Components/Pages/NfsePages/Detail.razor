@@ -1,0 +1,245 @@
+@page "/nfse/{Id:int}"
+@rendermode InteractiveServer
+@inject INfseService NfseService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>NFS-e</PageTitle>
+
+@if (nfse is null)
+{
+    <p>@(loaded ? "NFS-e not found." : "Loading...")</p>
+    <a class="btn btn-secondary" href="/nfse">Back to NFS-e</a>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>@(nfse.Status == NfseStatus.Draft ? "NFS-e Draft" : $"NFS-e nº {NfseLabels.Number(nfse)}")</h1>
+            <p>
+                Invoice <a href="/invoices/@nfse.InvoiceId">@nfse.Invoice.InvoiceNumber</a>
+                (@nfse.Invoice.Total.ToString("N2") @nfse.Invoice.Currency) · <NfseStatusBadge Status="nfse.Status" />
+            </p>
+        </div>
+        <div class="actions-row">
+            @if (nfse.Status == NfseStatus.Draft)
+            {
+                <a class="btn btn-primary" href="/nfse/import?invoiceId=@nfse.InvoiceId" data-action="import-for-invoice">Import Issued XML</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(nfse.Link))
+            {
+                <a class="btn btn-secondary" href="@nfse.Link" target="_blank">Open on City Hall Portal</a>
+            }
+            <button class="btn btn-danger" data-action="delete-nfse" @onclick="DeleteAsync">Delete</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="message @(isError ? "message-error" : null)">@message</p>
+    }
+
+    @if (nfse.Status == NfseStatus.Draft)
+    {
+        <p class="hint">Not issued yet. Fill in the amount received in BRL, issue the NFS-e on the city hall portal and then import its XML.</p>
+
+        <EditForm Model="model" OnValidSubmit="SaveAsync">
+            <h2>Taker</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Name</label>
+                    <InputText @bind-Value="model.TakerName" class="input" data-field="taker-name" />
+                </div>
+                <div class="form-field">
+                    <label>Country</label>
+                    <InputText @bind-Value="model.TakerCountry" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>Country Code</label>
+                    <InputText @bind-Value="model.TakerCountryCode" class="input" placeholder="CA, GB, US..." />
+                </div>
+            </div>
+
+            <h2>Service</h2>
+            <div class="form-grid">
+                <div class="form-field full-width">
+                    <label>Description</label>
+                    <InputTextArea @bind-Value="model.Description" class="input" rows="2" data-field="description" />
+                </div>
+                <div class="form-field full-width">
+                    <label>Notes</label>
+                    <InputTextArea @bind-Value="model.Notes" class="input" rows="2" />
+                </div>
+                <div class="form-field">
+                    <label>Service Date</label>
+                    <InputDate @bind-Value="model.ServiceDate" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>Activity Code</label>
+                    <InputText @bind-Value="model.ActivityCode" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>Service List Item</label>
+                    <InputText @bind-Value="model.ServiceListItem" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>NBS Code</label>
+                    <InputText @bind-Value="model.NbsCode" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>Tax Situation</label>
+                    <InputText @bind-Value="model.TaxSituation" class="input" />
+                </div>
+                <div class="form-field">
+                    <label>ISS Rate (%)</label>
+                    <InputNumber @bind-Value="model.IssRate" class="input" />
+                </div>
+            </div>
+
+            <h2>Amount</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Exchange Rate (BRL per @nfse.Invoice.Currency)</label>
+                    <input class="input" type="number" step="0.0001" data-field="exchange-rate"
+                           value="@exchangeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                           @onchange="OnExchangeRateChanged" />
+                </div>
+                <div class="form-field">
+                    <label>Amount (BRL)</label>
+                    <InputNumber @bind-Value="model.AmountBrl" @bind-Value:after="UpdateExchangeRate" class="input" data-field="amount-brl" />
+                </div>
+            </div>
+
+            <h2>Withheld Taxes (BRL)</h2>
+            <p class="hint">Usually zero for services exported to foreign clients.</p>
+            <div class="form-grid">
+                <div class="form-field"><label>IR</label><InputNumber @bind-Value="model.IrAmount" class="input" /></div>
+                <div class="form-field"><label>INSS</label><InputNumber @bind-Value="model.InssAmount" class="input" /></div>
+                <div class="form-field"><label>CSLL</label><InputNumber @bind-Value="model.CsllAmount" class="input" /></div>
+                <div class="form-field"><label>PIS</label><InputNumber @bind-Value="model.PisAmount" class="input" /></div>
+                <div class="form-field"><label>COFINS</label><InputNumber @bind-Value="model.CofinsAmount" class="input" /></div>
+                <div class="form-field"><label>ISS Withheld</label><InputNumber @bind-Value="model.IssWithheldAmount" class="input" /></div>
+            </div>
+
+            <div class="actions-row">
+                <button class="btn btn-primary" type="submit" data-action="save-nfse">Save Draft</button>
+                <a class="btn btn-secondary" href="/nfse">Back</a>
+            </div>
+        </EditForm>
+    }
+    else
+    {
+        <div class="invoice-grid">
+            <div class="invoice-card">
+                <strong>Identification</strong>
+                <p><strong>Number / Series:</strong> @NfseLabels.Number(nfse)</p>
+                <p><strong>Issued at:</strong> @nfse.IssuedAt?.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                <p><strong>Service date:</strong> @nfse.ServiceDate?.ToString("dd/MM/yyyy")</p>
+                <p><strong>Municipal status:</strong> @nfse.MunicipalStatusCode @nfse.MunicipalStatusDescription</p>
+                <p><strong>Verification code:</strong> <span class="break">@nfse.VerificationCode</span></p>
+                <p><strong>National access key:</strong> <span class="break">@nfse.NationalAccessKey</span></p>
+                <p><strong>Provider CNPJ:</strong> @nfse.ProviderCnpj</p>
+            </div>
+            <div class="invoice-card">
+                <strong>Taker and Service</strong>
+                <p><strong>Taker:</strong> @nfse.TakerName</p>
+                <p><strong>Country:</strong> @nfse.TakerCountry @(string.IsNullOrWhiteSpace(nfse.TakerCountryCode) ? "" : $"({nfse.TakerCountryCode})")</p>
+                <p><strong>Description:</strong> @nfse.Description</p>
+                @if (!string.IsNullOrWhiteSpace(nfse.Notes))
+                {
+                    <p><strong>Notes:</strong> @nfse.Notes</p>
+                }
+                <p><strong>Activity / Item / NBS:</strong> @nfse.ActivityCode / @nfse.ServiceListItem / @nfse.NbsCode</p>
+                <p><strong>Tax situation:</strong> @nfse.TaxSituation · <strong>ISS rate:</strong> @nfse.IssRate.ToString("0.00##")%</p>
+            </div>
+            <div class="invoice-card">
+                <strong>Amounts (BRL)</strong>
+                <p><strong>Total:</strong> @NfseLabels.Brl(nfse.AmountBrl)</p>
+                <p><strong>Exchange rate:</strong> @(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</p>
+                <p><strong>IR:</strong> @NfseLabels.Brl(nfse.IrAmount)</p>
+                <p><strong>INSS:</strong> @NfseLabels.Brl(nfse.InssAmount)</p>
+                <p><strong>CSLL:</strong> @NfseLabels.Brl(nfse.CsllAmount)</p>
+                <p><strong>PIS:</strong> @NfseLabels.Brl(nfse.PisAmount)</p>
+                <p><strong>COFINS:</strong> @NfseLabels.Brl(nfse.CofinsAmount)</p>
+                <p><strong>ISS withheld:</strong> @NfseLabels.Brl(nfse.IssWithheldAmount)</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(nfse.XmlContent))
+        {
+            <details class="xml-source">
+                <summary>Original XML (@nfse.FileName)</summary>
+                <pre>@nfse.XmlContent</pre>
+            </details>
+        }
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [SupplyParameterFromQuery(Name = "message")] public string? InitialMessage { get; set; }
+
+    private Nfse? nfse;
+    private NfseEditModel model = new();
+    private decimal? exchangeRate;
+    private bool loaded;
+    private bool isError;
+    private string? message;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+        message ??= InitialMessage;
+    }
+
+    private async Task LoadAsync()
+    {
+        nfse = await NfseService.GetAsync(Id);
+        if (nfse is not null)
+        {
+            model = NfseEditModel.FromNfse(nfse);
+            UpdateExchangeRate();
+        }
+        loaded = true;
+    }
+
+    private void OnExchangeRateChanged(ChangeEventArgs e)
+    {
+        if (nfse is null || !decimal.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var rate) || rate <= 0)
+            return;
+
+        exchangeRate = rate;
+        model.AmountBrl = Math.Round(nfse.Invoice.Total * rate, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private void UpdateExchangeRate() =>
+        exchangeRate = nfse is not null && nfse.Invoice.Total > 0 && model.AmountBrl > 0
+            ? Math.Round(model.AmountBrl / nfse.Invoice.Total, 4)
+            : null;
+
+    private async Task SaveAsync()
+    {
+        var result = await NfseService.UpdateDraftAsync(Id, model);
+        isError = !result.Success;
+        message = result.Message;
+        if (result.Success)
+            await LoadAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (nfse is null || !await JS.InvokeAsync<bool>("confirm", "Delete this NFS-e from the app? The note on the city hall portal is not affected."))
+            return;
+
+        var result = await NfseService.DeleteAsync(Id);
+        if (result.Success)
+        {
+            Navigation.NavigateTo("/nfse");
+            return;
+        }
+
+        isError = true;
+        message = result.Message;
+    }
+}
