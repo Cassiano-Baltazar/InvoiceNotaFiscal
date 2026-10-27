@@ -18,5 +18,10 @@ public class Client
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Data required by the NFS-e for a foreign taker
+    public string? CountryCode { get; set; }
+    public string? TaxId { get; set; }
+    public MissingTaxIdReason? MissingTaxIdReason { get; set; }
+
     public ICollection<Invoice> Invoices { get; set; } = [];
 }

@@ -135,6 +135,53 @@ public class NfsePagesTests : ComponentTestBase
     }
 
     [Fact]
+    public void Draft_foreign_amount_with_exchange_rate_fills_the_brl_amount()
+    {
+        var id = CreateDraft(SeptemberInvoice(canada));
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        Assert.Equal("CAD", cut.Find("[data-field=currency-code]").GetAttribute("value"));
+        cut.Find("[data-field=exchange-rate]").Change("4");
+        cut.Find("[data-field=amount-foreign]").Change("3500");
+        Assert.Equal("14000", cut.Find("[data-field=amount-brl]").GetAttribute("value"));
+        cut.Find("[data-field=taker-tax-id]").Change("BN-123");
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains("saved", cut.Find(".message").TextContent));
+        var note = AllNfses().Single();
+        Assert.Equal(3500m, note.AmountForeign);
+        Assert.Equal(14000m, note.AmountBrl);
+        Assert.Equal("BN-123", note.TakerTaxId);
+    }
+
+    [Fact]
+    public void Issue_button_shows_what_is_missing()
+    {
+        ConfirmDialogsReturn(true);
+        var id = CreateDraft(SeptemberInvoice(canada));
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        Assert.Contains("Issue Test NFS-e", cut.Find("[data-action=issue-nfse]").TextContent);
+        cut.Find("[data-action=issue-nfse]").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("cannot be issued yet", cut.Find(".message").TextContent));
+        Assert.Contains("municipality code", cut.Find(".message").TextContent);
+        Assert.Empty(NationalApi.Sent);
+    }
+
+    [Fact]
+    public void Issue_button_does_nothing_when_not_confirmed()
+    {
+        ConfirmDialogsReturn(false);
+        var id = CreateDraft(SeptemberInvoice(canada));
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        cut.Find("[data-action=issue-nfse]").Click();
+
+        Assert.Empty(cut.FindAll(".message"));
+    }
+
+    [Fact]
     public void Draft_with_invalid_data_shows_the_error()
     {
         var id = CreateDraft(SeptemberInvoice(canada));

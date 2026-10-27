@@ -46,7 +46,8 @@ The rules live in `Services/InvoiceRules.cs`.
 
 ## NFS-e
 
-The app does not issue NFS-e: notes are issued on the city hall portal (IPM / Atende.net) and their XML is imported.
+Notes are issued from the draft through the national API (Emissor Nacional, layout 1.01). Notes issued elsewhere
+(the city hall portal or the Emissor Nacional website) can still be imported from their XML.
 
 - **Draft on payment:** marking an invoice as paid creates an NFS-e draft linked to it, with the taker, description
   and fiscal codes (activity, service list item, NBS, tax situation, ISS rate) copied from the latest note of the same
@@ -59,6 +60,23 @@ The app does not issue NFS-e: notes are issued on the city hall portal (IPM / At
   Replaced (*substituída*) and cancelled notes are kept as history. The same XML cannot be imported twice
   (checked by the national access key, or by number and series). An invoice with an NFS-e cannot be deleted.
 - The original XML is stored with the note and shown on its page.
+- **Foreign taker and foreign trade:** the client record has the ISO country code and the tax id (NIF) in its
+  country, or the reason it has none. A new draft copies them, together with the invoice currency and total
+  (amount in the foreign currency), the service mode (cross-border by default), whether the company is related to
+  the taker and the country where the result is used. These are the data the NFS-e needs for an exported service.
+  On the draft, the exchange rate turns the foreign amount into the amount in BRL.
+- **Issue through the Emissor Nacional:** **Issue NFS-e** on a draft checks the data, builds the DPS, validates it
+  against the official XSD (`Schemas/Nfse`), signs it with the certificate (XMLDSig, RSA-SHA256) and sends it to the
+  Sefin Nacional API with mutual TLS. The issued note's number, access key and XML are stored with it. Setup in
+  **Settings > NFS-e (Emissor Nacional)**: environment, municipality code (IBGE, 4309308 for Guaíba), DPS series and
+  next number, default national tax code (`010101`) and the approximate Simples Nacional rate (`pTotTribSN`).
+  The DPS is built for a Simples Nacional ME/EPP company exporting a service: ISS as export (`tribISSQN` 3), foreign
+  taker with NIF and foreign trade group (`comExt`, currency in the BACEN code).
+  - **Restricted production** (default) sends test notes with no fiscal value: the draft stays a draft and the
+    message shows the test number and key. Switch to **Production** once a test note is accepted.
+  - The DPS number is reserved on the first attempt and kept on the draft. A retry after a rejection or a network
+    error sends the same DPS, and first asks the API whether it was already processed, so a note is never issued twice.
+  - Cancelling an issued note is done on the Emissor Nacional website.
 - **Digital certificate:** **Settings > Digital Certificate (NFS-e)** stores the e-CNPJ A1 certificate (`.pfx`)
   that will be used to issue NFS-e. The file is checked with its password (it must contain the private key) and
   stored in the database, with holder, issuer and expiry date shown on the screen. The password is encrypted with

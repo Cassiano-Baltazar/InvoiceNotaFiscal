@@ -1,6 +1,7 @@
 using InvoiceApp.Tests.Infrastructure;
 using InvoiceApp.Web.Data.Entities;
 using InvoiceApp.Web.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceApp.Tests.Services;
 
@@ -75,4 +76,37 @@ public class ClientServiceTests : ServiceTestBase
     [Fact]
     public async Task Delete_missing_client_does_nothing() =>
         await CreateService().DeleteAsync(999);
+
+    [Fact]
+    public async Task Save_normalizes_nfse_fields()
+    {
+        var service = new ClientService(NewContext());
+        var client = await service.SaveAsync(new Client
+        {
+            Name = "X", Country = "Canada", Currency = "CAD",
+            CountryCode = " ca ", TaxId = " 123 ", MissingTaxIdReason = MissingTaxIdReason.Exempt
+        });
+
+        using var db = NewContext();
+        var saved = await db.Clients.SingleAsync(x => x.Id == client.Id);
+        Assert.Equal("CA", saved.CountryCode);
+        Assert.Equal("123", saved.TaxId);
+        Assert.Null(saved.MissingTaxIdReason);
+    }
+
+    [Fact]
+    public async Task Save_keeps_the_reason_when_there_is_no_tax_id()
+    {
+        var client = await new ClientService(NewContext()).SaveAsync(new Client
+        {
+            Name = "X", Country = "Canada", Currency = "CAD", CountryCode = "", TaxId = " ",
+            MissingTaxIdReason = MissingTaxIdReason.NotRequired
+        });
+
+        using var db = NewContext();
+        var saved = await db.Clients.SingleAsync(x => x.Id == client.Id);
+        Assert.Null(saved.CountryCode);
+        Assert.Null(saved.TaxId);
+        Assert.Equal(MissingTaxIdReason.NotRequired, saved.MissingTaxIdReason);
+    }
 }

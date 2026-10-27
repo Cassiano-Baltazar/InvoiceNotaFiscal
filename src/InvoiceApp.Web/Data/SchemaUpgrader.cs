@@ -13,6 +13,73 @@ public static class SchemaUpgrader
         await AddInvoiceItemsAsync(db, cancellationToken);
         await AddNfsesAsync(db, cancellationToken);
         await AddDigitalCertificatesAsync(db, cancellationToken);
+        await AddForeignTradeColumnsAsync(db, cancellationToken);
+        await AddNationalApiColumnsAsync(db, cancellationToken);
+    }
+
+    // v6: issuing NFS-e through the national API (Emissor Nacional).
+    private static async Task AddNationalApiColumnsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        await AddColumnAsync(db, "CompanySettings", "NfseEnvironment", "INTEGER NOT NULL DEFAULT 2", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "MunicipalityCode", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "DpsSeries", "TEXT NOT NULL DEFAULT '1'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "NextDpsNumber", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "DefaultNationalTaxCode", "TEXT NOT NULL DEFAULT '010101'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "SimplesNacionalTaxRate", "TEXT NOT NULL DEFAULT '0.0'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "MunicipalRegistration", "TEXT NULL", cancellationToken);
+
+        await AddColumnAsync(db, "Nfses", "NationalTaxCode", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsSeries", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsNumber", "INTEGER NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsId", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "DpsEnvironment", "INTEGER NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "IssueError", "TEXT NULL", cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_Nfses_DpsId" ON "Nfses" ("DpsId");
+            """, cancellationToken);
+    }
+
+    // v5: data the NFS-e needs for a foreign taker (tax id, country code) and for foreign trade
+    // (currency, amount in that currency, how the service is provided).
+    private static async Task AddForeignTradeColumnsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        await AddColumnAsync(db, "Clients", "CountryCode", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Clients", "TaxId", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Clients", "MissingTaxIdReason", "INTEGER NULL", cancellationToken);
+
+        await AddColumnAsync(db, "Nfses", "TakerTaxId", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "TakerMissingTaxIdReason", "INTEGER NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "CurrencyCode", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "AmountForeign", "TEXT NOT NULL DEFAULT '0.0'", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "ServiceMode", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "RelatedToTaker", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+        await AddColumnAsync(db, "Nfses", "ResultCountryCode", "TEXT NULL", cancellationToken);
+
+        // Notes created before this version: the foreign amount and currency are the invoice's.
+        await db.Database.ExecuteSqlRawAsync("""
+            UPDATE "Nfses"
+            SET "CurrencyCode" = (SELECT i."Currency" FROM "Invoices" i WHERE i."Id" = "Nfses"."InvoiceId"),
+                "AmountForeign" = (SELECT i."Total" FROM "Invoices" i WHERE i."Id" = "Nfses"."InvoiceId")
+            WHERE "CurrencyCode" IS NULL;
+            """, cancellationToken);
+    }
+
+    private static async Task AddColumnAsync(AppDbContext db, string table, string column, string definition, CancellationToken cancellationToken)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await db.Database.OpenConnectionAsync(cancellationToken);
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}';";
+            if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) > 0)
+                return;
+        }
+
+        var sql = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {definition};";
+        await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
     }
 
     // v4: digital certificate (.pfx) used to sign and send NFS-e.

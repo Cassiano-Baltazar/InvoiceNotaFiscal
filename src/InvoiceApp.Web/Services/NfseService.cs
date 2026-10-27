@@ -97,6 +97,10 @@ public class NfseService(AppDbContext db) : INfseService
                 .OrderByDescending(x => x.IssuedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
+        var client = await db.Clients.FindAsync([invoice.ClientId], cancellationToken);
+        var sameClientTemplate = template?.Invoice.ClientId == invoice.ClientId ? template : null;
+        var countryCode = Clean(client?.CountryCode)?.ToUpperInvariant() ?? sameClientTemplate?.TakerCountryCode;
+
         var draft = new Nfse
         {
             InvoiceId = invoice.Id,
@@ -104,7 +108,17 @@ public class NfseService(AppDbContext db) : INfseService
             Source = NfseSource.Manual,
             TakerName = template?.Invoice.ClientId == invoice.ClientId ? template.TakerName : invoice.ClientName.ToUpperInvariant(),
             TakerCountry = template?.Invoice.ClientId == invoice.ClientId ? template.TakerCountry : invoice.ClientCountry,
-            TakerCountryCode = template?.Invoice.ClientId == invoice.ClientId ? template.TakerCountryCode : null,
+            TakerCountryCode = countryCode,
+            TakerTaxId = Clean(client?.TaxId) ?? sameClientTemplate?.TakerTaxId,
+            TakerMissingTaxIdReason = string.IsNullOrWhiteSpace(client?.TaxId) ? client?.MissingTaxIdReason ?? sameClientTemplate?.TakerMissingTaxIdReason : null,
+            CurrencyCode = invoice.Currency.Trim().ToUpperInvariant(),
+            AmountForeign = invoice.Total,
+            ServiceMode = sameClientTemplate?.ServiceMode ?? ForeignServiceMode.CrossBorder,
+            RelatedToTaker = sameClientTemplate?.RelatedToTaker ?? false,
+            ResultCountryCode = countryCode,
+            NationalTaxCode = sameClientTemplate?.NationalTaxCode
+                ?? (await db.CompanySettings.FirstOrDefaultAsync(cancellationToken))?.DefaultNationalTaxCode
+                ?? NationalTaxCodeFromServiceListItem(template?.ServiceListItem ?? DefaultServiceListItem),
             Description = BuildDescription(invoice),
             Notes = $"Invoice {invoice.InvoiceNumber} - {invoice.Currency} {invoice.Total.ToString("N2", CultureInfo.InvariantCulture)}",
             ActivityCode = template?.ActivityCode ?? DefaultActivityCode,
@@ -137,6 +151,14 @@ public class NfseService(AppDbContext db) : INfseService
             return NfseActionResult.Fail("ISS rate must be between 0 and 100.", id);
         if (new[] { model.IrAmount, model.InssAmount, model.CsllAmount, model.PisAmount, model.CofinsAmount, model.IssWithheldAmount }.Any(x => x < 0))
             return NfseActionResult.Fail("Tax amounts cannot be negative.", id);
+        if (model.AmountForeign < 0)
+            return NfseActionResult.Fail("Amount in the foreign currency cannot be negative.", id);
+        if (!IsCode(model.TakerCountryCode, 2) || !IsCode(model.ResultCountryCode, 2))
+            return NfseActionResult.Fail("Country codes must have 2 letters (ISO), e.g. GB, CA, US.", id);
+        if (!IsCode(model.CurrencyCode, 3))
+            return NfseActionResult.Fail("Currency must have 3 letters (ISO), e.g. GBP, CAD, USD.", id);
+        if (!string.IsNullOrWhiteSpace(model.NationalTaxCode) && !System.Text.RegularExpressions.Regex.IsMatch(model.NationalTaxCode.Trim(), @"^\d{6}$"))
+            return NfseActionResult.Fail("National tax code must have 6 digits, e.g. 010101.", id);
 
         nfse.TakerName = model.TakerName.Trim();
         nfse.TakerCountry = Clean(model.TakerCountry);
@@ -156,6 +178,14 @@ public class NfseService(AppDbContext db) : INfseService
         nfse.PisAmount = model.PisAmount;
         nfse.CofinsAmount = model.CofinsAmount;
         nfse.IssWithheldAmount = model.IssWithheldAmount;
+        nfse.TakerTaxId = Clean(model.TakerTaxId);
+        nfse.TakerMissingTaxIdReason = nfse.TakerTaxId is null ? model.TakerMissingTaxIdReason : null;
+        nfse.CurrencyCode = Clean(model.CurrencyCode)?.ToUpperInvariant();
+        nfse.AmountForeign = Math.Round(model.AmountForeign, 2);
+        nfse.ServiceMode = model.ServiceMode;
+        nfse.RelatedToTaker = model.RelatedToTaker;
+        nfse.ResultCountryCode = Clean(model.ResultCountryCode)?.ToUpperInvariant();
+        nfse.NationalTaxCode = Clean(model.NationalTaxCode);
         nfse.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -237,7 +267,13 @@ public class NfseService(AppDbContext db) : INfseService
         var replacedDraft = nfse is not null;
         if (nfse is null)
         {
-            nfse = new Nfse { InvoiceId = invoiceId };
+            nfse = new Nfse
+            {
+                InvoiceId = invoiceId,
+                CurrencyCode = invoice.Currency.Trim().ToUpperInvariant(),
+                AmountForeign = invoice.Total,
+                ResultCountryCode = data.TakerCountryCode
+            };
             db.Nfses.Add(nfse);
         }
 
@@ -396,6 +432,13 @@ public class NfseService(AppDbContext db) : INfseService
         var text = items.Count > 0 ? string.Join("; ", items) : invoice.ServiceDescription;
         return text.Replace(" — ", " - ").Replace('—', '-');
     }
+
+    /// <summary>The city hall item "10101" (1.01, desdobro 01) is the national code "010101".</summary>
+    internal static string NationalTaxCodeFromServiceListItem(string serviceListItem) =>
+        Digits(serviceListItem).PadLeft(6, '0');
+
+    private static bool IsCode(string? value, int length) =>
+        string.IsNullOrWhiteSpace(value) || (value.Trim().Length == length && value.Trim().All(char.IsAsciiLetter));
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

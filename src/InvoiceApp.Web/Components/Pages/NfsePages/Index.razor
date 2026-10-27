@@ -60,7 +60,7 @@ else
                     <td>@NfseLabels.Brl(nfse.AmountBrl)</td>
                     <td>@(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</td>
                     <td><NfseStatusBadge Status="nfse.Status" /></td>
-                    <td>@nfse.Source</td>
+                    <td>@NfseLabels.Source(nfse.Source)</td>
                     <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? "Edit" : "View")</a></td>
                 </tr>
             }

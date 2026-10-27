@@ -16,12 +16,48 @@ public static class NfseLabels
         _ => status.ToString()
     };
 
+    public static string Source(NfseSource source) => source switch
+    {
+        NfseSource.Manual => "Manual",
+        NfseSource.Imported => "Imported",
+        NfseSource.NationalApi => "Emissor Nacional",
+        _ => source.ToString()
+    };
+
+    public static string Environment(NfseEnvironment environment) => environment switch
+    {
+        NfseEnvironment.Production => "Production",
+        NfseEnvironment.RestrictedProduction => "Restricted production (tests, no fiscal value)",
+        _ => environment.ToString()
+    };
+
     public static string Brl(decimal amount) => "R$ " + amount.ToString("N2", PtBr);
 
     public static string Number(Nfse nfse) =>
         string.IsNullOrWhiteSpace(nfse.Number) ? "—" : $"{nfse.Number}{(string.IsNullOrWhiteSpace(nfse.Series) ? "" : "/" + nfse.Series)}";
 
-    /// <summary>BRL received per unit of the invoice currency, when both amounts are known.</summary>
-    public static decimal? ExchangeRate(Nfse nfse) =>
-        nfse.AmountBrl > 0 && nfse.Invoice?.Total > 0 ? Math.Round(nfse.AmountBrl / nfse.Invoice.Total, 4) : null;
+    /// <summary>BRL received per unit of the foreign currency, when both amounts are known.</summary>
+    public static decimal? ExchangeRate(Nfse nfse)
+    {
+        var foreign = nfse.AmountForeign > 0 ? nfse.AmountForeign : nfse.Invoice?.Total ?? 0;
+        return nfse.AmountBrl > 0 && foreign > 0 ? Math.Round(nfse.AmountBrl / foreign, 4) : null;
+    }
+
+    public static string TaxIdReasonLabel(MissingTaxIdReason reason) => reason switch
+    {
+        MissingTaxIdReason.NotInformed => "Not informed",
+        MissingTaxIdReason.Exempt => "Exempt from tax id",
+        MissingTaxIdReason.NotRequired => "Tax id not required",
+        _ => reason.ToString()
+    };
+
+    public static string ServiceModeLabel(ForeignServiceMode mode) => mode switch
+    {
+        ForeignServiceMode.Unknown => "Unknown",
+        ForeignServiceMode.CrossBorder => "Cross-border (provided from Brazil)",
+        ForeignServiceMode.ConsumptionInBrazil => "Consumed in Brazil",
+        ForeignServiceMode.CommercialPresenceAbroad => "Commercial presence abroad",
+        ForeignServiceMode.TemporaryPresenceOfPersons => "Temporary presence of persons",
+        _ => mode.ToString()
+    };
 }

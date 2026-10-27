@@ -26,6 +26,9 @@ builder.Services.AddSingleton<ISecretProtector>(AesSecretProtector.FromKeyFile(c
 
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<INationalNfseApi, HttpNationalNfseApi>();
+builder.Services.AddScoped<INfseIssuer, NfseIssuer>();
 builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
 builder.Services.AddScoped<INfseService, NfseService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
