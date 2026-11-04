@@ -106,7 +106,7 @@ public class DpsXmlTests
         Assert.Equal("0", Value(dps, "vincPrest"));
         Assert.Equal("6858.05", Value(dps, "vServ"));
         Assert.Equal("3", Value(dps, "tribISSQN"));
-        Assert.Equal("GB", Value(dps, "cPaisResult"));
+        Assert.False(Has(dps, "cPaisResult"));
         Assert.False(Has(dps, "pAliq"));
         Assert.Equal("6.00", Value(dps, "pTotTribSN"));
         Assert.Equal("Invoice INV-2026-11-001 - GBP 1,000.00", Value(dps, "xInfComp"));
@@ -235,7 +235,6 @@ public class DpsXmlTests
         nfse.AmountBrl = 0;
         nfse.CurrencyCode = "XYZ";
         nfse.TakerTaxId = null;
-        nfse.ResultCountryCode = null;
         var company = Company();
         company.MunicipalityCode = "";
         company.SimplesNacionalTaxRate = 0;
@@ -247,7 +246,19 @@ public class DpsXmlTests
         Assert.Contains(problems, p => p.Contains("Amount (BRL)"));
         Assert.Contains(problems, p => p.Contains("Currency 'XYZ'"));
         Assert.Contains(problems, p => p.Contains("tax id (NIF)"));
-        Assert.Contains(problems, p => p.Contains("result is used"));
+    }
+
+    [Fact]
+    public void Check_refuses_tax_id_reason_not_informed()
+    {
+        var nfse = Draft();
+        nfse.TakerTaxId = null;
+        nfse.TakerMissingTaxIdReason = MissingTaxIdReason.NotInformed;
+
+        Assert.Contains(DpsXml.Check(nfse, Company()), p => p.Contains("tax id (NIF)"));
+
+        nfse.TakerMissingTaxIdReason = MissingTaxIdReason.NotRequired;
+        Assert.DoesNotContain(DpsXml.Check(nfse, Company()), p => p.Contains("tax id (NIF)"));
         Assert.Empty(DpsXml.Check(Draft(), Company()));
     }
 

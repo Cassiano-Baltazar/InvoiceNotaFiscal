@@ -72,10 +72,9 @@ public static partial class DpsXml
             problems.Add($"Currency '{nfse.CurrencyCode}' is not supported. Use one of: {string.Join(", ", BacenCurrencyCodes.Keys)}.");
         if (!IsCountryCode(nfse.TakerCountryCode))
             problems.Add("Taker country code (ISO, 2 letters) is required.");
-        if (!IsCountryCode(nfse.ResultCountryCode))
-            problems.Add("The country where the result is used (ISO, 2 letters) is required.");
-        if (string.IsNullOrWhiteSpace(nfse.TakerTaxId) && nfse.TakerMissingTaxIdReason is null)
-            problems.Add("Fill in the taker tax id (NIF) or the reason it has none.");
+        // The national system refuses reason 0 (not informed) with E0226.
+        if (string.IsNullOrWhiteSpace(nfse.TakerTaxId) && nfse.TakerMissingTaxIdReason is null or MissingTaxIdReason.NotInformed)
+            problems.Add("Fill in the taker tax id (NIF), or choose why it has none (exempt or not required).");
         if (!Regex.IsMatch(nfse.NationalTaxCode ?? "", @"^\d{6}$"))
             problems.Add("National tax code must have 6 digits, e.g. 010101.");
         if (!string.IsNullOrWhiteSpace(nfse.NbsCode) && !Regex.IsMatch(nfse.NbsCode, @"^\d{9}$"))
@@ -141,7 +140,7 @@ public static partial class DpsXml
                     // Export of services: no ISS (LC 116, art. 2, I), so no rate and no withholding.
                     new XElement(Ns + "tribMun",
                         new XElement(Ns + "tribISSQN", 3),
-                        new XElement(Ns + "cPaisResult", nfse.ResultCountryCode!.ToUpperInvariant()),
+                        // cPaisResult is only allowed in a few export scenarios (E0591), and the notes Guaíba sends leave it out.
                         new XElement(Ns + "tpRetISSQN", 1)),
                     new XElement(Ns + "totTrib",
                         new XElement(Ns + "pTotTribSN", company.SimplesNacionalTaxRate.ToString("0.00", CultureInfo.InvariantCulture))))));
