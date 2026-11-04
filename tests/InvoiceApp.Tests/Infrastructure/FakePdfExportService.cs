@@ -21,6 +21,17 @@ public class FakePdfExportService : IPdfExportService
         return Task.FromResult(PdfBytes);
     }
 
+    public List<string> GeneratedHtml { get; } = [];
+
+    public Task<byte[]> GeneratePdfFromHtmlAsync(string html, CancellationToken cancellationToken = default)
+    {
+        if (ShouldFail)
+            throw new InvalidOperationException("Browser not available");
+
+        GeneratedHtml.Add(html);
+        return Task.FromResult(PdfBytes);
+    }
+
     public async Task<string> SavePdfAsync(InvoiceReportModel model, string outputPath, CancellationToken cancellationToken = default)
     {
         var bytes = await GeneratePdfAsync(model, cancellationToken);

@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @inject INfseService NfseService
 @inject INfseIssuer NfseIssuer
+@inject INfseFileService NfseFiles
 @inject ICompanySettingsService SettingsService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -30,6 +31,12 @@ else
                     @(issuing ? "Issuing..." : environment == NfseEnvironment.Production ? "Issue NFS-e" : "Issue Test NFS-e")
                 </button>
                 <a class="btn btn-secondary" href="/nfse/import?invoiceId=@nfse.InvoiceId" data-action="import-for-invoice">Import Issued XML</a>
+            }
+            @if (nfse.Status != NfseStatus.Draft && !string.IsNullOrWhiteSpace(nfse.XmlContent))
+            {
+                <button class="btn btn-secondary" data-action="save-nfse-files" disabled="@savingFiles" @onclick="SaveFilesAsync">
+                    @(savingFiles ? "Saving..." : "Save XML and PDF")
+                </button>
             }
             @if (!string.IsNullOrWhiteSpace(nfse.Link))
             {
@@ -107,24 +114,8 @@ else
                     <InputText @bind-Value="model.NationalTaxCode" class="input" maxlength="6" placeholder="010101" data-field="national-tax-code" />
                 </div>
                 <div class="form-field">
-                    <label>Activity Code</label>
-                    <InputText @bind-Value="model.ActivityCode" class="input" />
-                </div>
-                <div class="form-field">
-                    <label>Service List Item</label>
-                    <InputText @bind-Value="model.ServiceListItem" class="input" />
-                </div>
-                <div class="form-field">
                     <label>NBS Code</label>
                     <InputText @bind-Value="model.NbsCode" class="input" />
-                </div>
-                <div class="form-field">
-                    <label>Tax Situation</label>
-                    <InputText @bind-Value="model.TaxSituation" class="input" />
-                </div>
-                <div class="form-field">
-                    <label>ISS Rate (%)</label>
-                    <InputNumber @bind-Value="model.IssRate" class="input" />
                 </div>
             </div>
 
@@ -162,25 +153,10 @@ else
                     </InputSelect>
                 </div>
                 <div class="form-field">
-                    <label>Country where the result is used</label>
-                    <InputText @bind-Value="model.ResultCountryCode" class="input" placeholder="CA, GB, US..." maxlength="2" data-field="result-country-code" />
-                </div>
-                <div class="form-field">
                     <label>
                         <InputCheckbox @bind-Value="model.RelatedToTaker" /> Company is related to the taker (same group, parent, branch...)
                     </label>
                 </div>
-            </div>
-
-            <h2>Withheld Taxes (BRL)</h2>
-            <p class="hint">Usually zero for services exported to foreign clients.</p>
-            <div class="form-grid">
-                <div class="form-field"><label>IR</label><InputNumber @bind-Value="model.IrAmount" class="input" /></div>
-                <div class="form-field"><label>INSS</label><InputNumber @bind-Value="model.InssAmount" class="input" /></div>
-                <div class="form-field"><label>CSLL</label><InputNumber @bind-Value="model.CsllAmount" class="input" /></div>
-                <div class="form-field"><label>PIS</label><InputNumber @bind-Value="model.PisAmount" class="input" /></div>
-                <div class="form-field"><label>COFINS</label><InputNumber @bind-Value="model.CofinsAmount" class="input" /></div>
-                <div class="form-field"><label>ISS Withheld</label><InputNumber @bind-Value="model.IssWithheldAmount" class="input" /></div>
             </div>
 
             <div class="actions-row">
@@ -217,20 +193,30 @@ else
                 {
                     <p><strong>Notes:</strong> @nfse.Notes</p>
                 }
-                <p><strong>Activity / Item / NBS:</strong> @nfse.ActivityCode / @nfse.ServiceListItem / @nfse.NbsCode</p>
-                <p><strong>Tax situation:</strong> @nfse.TaxSituation · <strong>ISS rate:</strong> @nfse.IssRate.ToString("0.00##")%</p>
+                @if (nfse.Source == NfseSource.NationalApi)
+                {
+                    <p><strong>National tax code / NBS:</strong> @nfse.NationalTaxCode / @nfse.NbsCode</p>
+                }
+                else
+                {
+                    <p><strong>Activity / Item / NBS:</strong> @nfse.ActivityCode / @nfse.ServiceListItem / @nfse.NbsCode</p>
+                    <p><strong>Tax situation:</strong> @nfse.TaxSituation · <strong>ISS rate:</strong> @nfse.IssRate.ToString("0.00##")%</p>
+                }
             </div>
             <div class="invoice-card">
                 <strong>Amounts (BRL)</strong>
                 <p><strong>Total:</strong> @NfseLabels.Brl(nfse.AmountBrl)</p>
                 <p><strong>Foreign amount:</strong> @(nfse.AmountForeign > 0 ? $"{nfse.AmountForeign:N2} {nfse.CurrencyCode}" : "—")</p>
                 <p><strong>Exchange rate:</strong> @(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</p>
-                <p><strong>IR:</strong> @NfseLabels.Brl(nfse.IrAmount)</p>
-                <p><strong>INSS:</strong> @NfseLabels.Brl(nfse.InssAmount)</p>
-                <p><strong>CSLL:</strong> @NfseLabels.Brl(nfse.CsllAmount)</p>
-                <p><strong>PIS:</strong> @NfseLabels.Brl(nfse.PisAmount)</p>
-                <p><strong>COFINS:</strong> @NfseLabels.Brl(nfse.CofinsAmount)</p>
-                <p><strong>ISS withheld:</strong> @NfseLabels.Brl(nfse.IssWithheldAmount)</p>
+                @if (nfse.Source != NfseSource.NationalApi)
+                {
+                    <p><strong>IR:</strong> @NfseLabels.Brl(nfse.IrAmount)</p>
+                    <p><strong>INSS:</strong> @NfseLabels.Brl(nfse.InssAmount)</p>
+                    <p><strong>CSLL:</strong> @NfseLabels.Brl(nfse.CsllAmount)</p>
+                    <p><strong>PIS:</strong> @NfseLabels.Brl(nfse.PisAmount)</p>
+                    <p><strong>COFINS:</strong> @NfseLabels.Brl(nfse.CofinsAmount)</p>
+                    <p><strong>ISS withheld:</strong> @NfseLabels.Brl(nfse.IssWithheldAmount)</p>
+                }
             </div>
         </div>
 
@@ -253,6 +239,7 @@ else
     private decimal? exchangeRate;
     private bool loaded;
     private bool issuing;
+    private bool savingFiles;
     private NfseEnvironment environment = NfseEnvironment.RestrictedProduction;
     private List<string> warnings = [];
     private bool isError;
@@ -326,12 +313,36 @@ else
             isError = !result.Success;
             message = result.Message;
             warnings = result.Warnings;
+            if (result.Success && environment == NfseEnvironment.Production)
+            {
+                // The note is issued already: a problem with the files is only a warning.
+                var files = await NfseFiles.SaveFilesAsync(Id);
+                warnings = [.. warnings, .. files.Warnings, .. files.Success ? [] : new[] { files.Message }];
+                if (files.Success)
+                    message += " " + files.Message;
+            }
         }
         finally
         {
             issuing = false;
         }
         await LoadAsync();
+    }
+
+    private async Task SaveFilesAsync()
+    {
+        savingFiles = true;
+        try
+        {
+            var result = await NfseFiles.SaveFilesAsync(Id);
+            isError = !result.Success;
+            message = result.Message;
+            warnings = result.Warnings;
+        }
+        finally
+        {
+            savingFiles = false;
+        }
     }
 
     private async Task DeleteAsync()

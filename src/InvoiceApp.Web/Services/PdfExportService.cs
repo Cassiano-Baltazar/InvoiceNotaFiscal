@@ -8,6 +8,7 @@ public interface IPdfExportService
 {
     Task<byte[]> GeneratePdfAsync(InvoiceReportModel model, CancellationToken cancellationToken = default);
     Task<string> SavePdfAsync(InvoiceReportModel model, string outputPath, CancellationToken cancellationToken = default);
+    Task<byte[]> GeneratePdfFromHtmlAsync(string html, CancellationToken cancellationToken = default);
 }
 
 public class PdfExportService(ILogger<PdfExportService> logger) : IPdfExportService
@@ -20,9 +21,11 @@ public class PdfExportService(ILogger<PdfExportService> logger) : IPdfExportServ
         @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
     ];
 
-    public async Task<byte[]> GeneratePdfAsync(InvoiceReportModel model, CancellationToken cancellationToken = default)
+    public Task<byte[]> GeneratePdfAsync(InvoiceReportModel model, CancellationToken cancellationToken = default) =>
+        GeneratePdfFromHtmlAsync(InvoiceHtmlBuilder.Build(model), cancellationToken);
+
+    public async Task<byte[]> GeneratePdfFromHtmlAsync(string html, CancellationToken cancellationToken = default)
     {
-        var html = InvoiceHtmlBuilder.Build(model);
         await using var browser = await LaunchBrowserAsync();
         await using var page = await browser.NewPageAsync();
         await page.SetContentAsync(html);
