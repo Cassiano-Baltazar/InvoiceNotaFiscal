@@ -29,6 +29,7 @@ builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<INationalNfseApi, HttpNationalNfseApi>();
 builder.Services.AddScoped<INfseIssuer, NfseIssuer>();
+builder.Services.AddScoped<INfseFileService, NfseFileService>();
 builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
 builder.Services.AddScoped<INfseService, NfseService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();

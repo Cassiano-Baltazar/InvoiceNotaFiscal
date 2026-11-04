@@ -26,6 +26,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton<INationalNfseApi>(NationalApi);
         Services.AddSingleton(TimeProvider.System);
         Services.AddScoped<INfseIssuer, NfseIssuer>();
+        Services.AddScoped<INfseFileService, NfseFileService>();
         Services.AddScoped<INfseService, NfseService>();
         Services.AddScoped<IInvoiceService, InvoiceService>();
         Services.AddSingleton<IPdfExportService>(Pdf);

@@ -246,6 +246,35 @@ public class NfsePagesTests : ComponentTestBase
     }
 
     [Fact]
+    public void Issued_note_saves_its_xml_to_the_invoice_month_folder()
+    {
+        var id = Import(NfseFixtures.IssuedCanada, SeptemberInvoice(canada));
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        cut.Find("[data-action=save-nfse-files]").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("XML saved", cut.Find(".message").TextContent));
+        using var db = Database.CreateContext();
+        var folder = Path.Combine(db.CompanySettings.Single().OutputBasePath, "2026-10", "NFSe");
+        Assert.True(File.Exists(Path.Combine(folder, NfseFixtures.IssuedCanada)));
+    }
+
+    [Fact]
+    public void Draft_form_has_only_the_fields_of_the_emissor_nacional()
+    {
+        var id = CreateDraft(SeptemberInvoice(canada));
+
+        var cut = Render<NfseDetail>(p => p.Add(x => x.Id, id));
+
+        Assert.DoesNotContain("Activity Code", cut.Markup);
+        Assert.DoesNotContain("Tax Situation", cut.Markup);
+        Assert.DoesNotContain("ISS Rate", cut.Markup);
+        Assert.DoesNotContain("Withheld", cut.Markup);
+        Assert.Empty(cut.FindAll("[data-field=result-country-code]"));
+        Assert.Single(cut.FindAll("[data-field=national-tax-code]"));
+    }
+
+    [Fact]
     public void Unknown_note_shows_not_found()
     {
         var cut = Render<NfseDetail>(p => p.Add(x => x.Id, 999));

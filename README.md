@@ -77,6 +77,11 @@ Notes are issued from the draft through the national API (Emissor Nacional, layo
   - The DPS number is reserved on the first attempt and kept on the draft. A retry after a rejection or a network
     error sends the same DPS, and first asks the API whether it was already processed, so a note is never issued twice.
   - Cancelling an issued note is done on the Emissor Nacional website.
+  - After a note is issued in production, its XML and a PDF (DANFSe built by the app from the XML) are saved to
+    `{output folder}/{YYYY-MM}/NFSe/`, the month folder of the invoice. **Save XML and PDF** on an issued note saves
+    them again (for imported notes from the city hall portal, only the XML).
+  - The draft only shows the fields the Emissor Nacional uses. The city hall fields (activity code, service list
+    item, tax situation, ISS rate, withheld taxes) are still shown on notes imported from the city hall portal.
 - **Digital certificate:** **Settings > Digital Certificate (NFS-e)** stores the e-CNPJ A1 certificate (`.pfx`)
   that will be used to issue NFS-e. The file is checked with its password (it must contain the private key) and
   stored in the database, with holder, issuer and expiry date shown on the screen. The password is encrypted with
