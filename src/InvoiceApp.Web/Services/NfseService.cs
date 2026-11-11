@@ -4,6 +4,7 @@ using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
 using InvoiceApp.Web.Models;
 using Microsoft.EntityFrameworkCore;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -73,17 +74,19 @@ public class NfseService(AppDbContext db) : INfseService
             .Include(x => x.Items)
             .FirstOrDefaultAsync(x => x.Id == invoiceId, cancellationToken);
         if (invoice is null)
-            return NfseActionResult.Fail("Invoice not found.");
+            return NfseActionResult.Fail(T("Invoice not found."));
         if (invoice.Status == InvoiceStatus.Cancelled)
-            return NfseActionResult.Fail("A cancelled invoice cannot have an NFS-e.");
+            return NfseActionResult.Fail(T("A cancelled invoice cannot have an NFS-e."));
 
         var current = await db.Nfses
             .Where(x => x.InvoiceId == invoiceId && (x.Status == NfseStatus.Draft || x.Status == NfseStatus.Issued))
             .FirstOrDefaultAsync(cancellationToken);
         if (current is not null)
         {
-            var label = current.Status == NfseStatus.Draft ? "an NFS-e draft" : $"NFS-e nº {current.Number}";
-            return NfseActionResult.Ok($"Invoice {invoice.InvoiceNumber} already has {label}.", current.Id);
+            var message = current.Status == NfseStatus.Draft
+                ? T("Invoice {0} already has an NFS-e draft.", invoice.InvoiceNumber)
+                : T("Invoice {0} already has NFS-e nº {1}.", invoice.InvoiceNumber, current.Number);
+            return NfseActionResult.Ok(message, current.Id);
         }
 
         var template = await db.Nfses
@@ -130,35 +133,35 @@ public class NfseService(AppDbContext db) : INfseService
 
         db.Nfses.Add(draft);
         await db.SaveChangesAsync(cancellationToken);
-        return NfseActionResult.Ok($"NFS-e draft created for invoice {invoice.InvoiceNumber}.", draft.Id);
+        return NfseActionResult.Ok(T("NFS-e draft created for invoice {0}.", invoice.InvoiceNumber), draft.Id);
     }
 
     public async Task<NfseActionResult> UpdateDraftAsync(int id, NfseEditModel model, CancellationToken cancellationToken = default)
     {
         var nfse = await db.Nfses.FindAsync([id], cancellationToken);
         if (nfse is null)
-            return NfseActionResult.Fail("NFS-e not found.");
+            return NfseActionResult.Fail(T("NFS-e not found."));
         if (nfse.Status != NfseStatus.Draft)
-            return NfseActionResult.Fail("Only drafts can be edited. Imported NFS-e keep the data from the XML.", id);
+            return NfseActionResult.Fail(T("Only drafts can be edited. Imported NFS-e keep the data from the XML."), id);
 
         if (string.IsNullOrWhiteSpace(model.TakerName))
-            return NfseActionResult.Fail("Taker name is required.", id);
+            return NfseActionResult.Fail(T("Taker name is required."), id);
         if (string.IsNullOrWhiteSpace(model.Description))
-            return NfseActionResult.Fail("Service description is required.", id);
+            return NfseActionResult.Fail(T("Service description is required."), id);
         if (model.AmountBrl < 0)
-            return NfseActionResult.Fail("Amount in BRL cannot be negative.", id);
+            return NfseActionResult.Fail(T("Amount in BRL cannot be negative."), id);
         if (model.IssRate < 0 || model.IssRate > 100)
-            return NfseActionResult.Fail("ISS rate must be between 0 and 100.", id);
+            return NfseActionResult.Fail(T("ISS rate must be between 0 and 100."), id);
         if (new[] { model.IrAmount, model.InssAmount, model.CsllAmount, model.PisAmount, model.CofinsAmount, model.IssWithheldAmount }.Any(x => x < 0))
-            return NfseActionResult.Fail("Tax amounts cannot be negative.", id);
+            return NfseActionResult.Fail(T("Tax amounts cannot be negative."), id);
         if (model.AmountForeign < 0)
-            return NfseActionResult.Fail("Amount in the foreign currency cannot be negative.", id);
+            return NfseActionResult.Fail(T("Amount in the foreign currency cannot be negative."), id);
         if (!IsCode(model.TakerCountryCode, 2) || !IsCode(model.ResultCountryCode, 2))
-            return NfseActionResult.Fail("Country codes must have 2 letters (ISO), e.g. GB, CA, US.", id);
+            return NfseActionResult.Fail(T("Country codes must have 2 letters (ISO), e.g. GB, CA, US."), id);
         if (!IsCode(model.CurrencyCode, 3))
-            return NfseActionResult.Fail("Currency must have 3 letters (ISO), e.g. GBP, CAD, USD.", id);
+            return NfseActionResult.Fail(T("Currency must have 3 letters (ISO), e.g. GBP, CAD, USD."), id);
         if (!string.IsNullOrWhiteSpace(model.NationalTaxCode) && !System.Text.RegularExpressions.Regex.IsMatch(model.NationalTaxCode.Trim(), @"^\d{6}$"))
-            return NfseActionResult.Fail("National tax code must have 6 digits, e.g. 010101.", id);
+            return NfseActionResult.Fail(T("National tax code must have 6 digits, e.g. 010101."), id);
 
         nfse.TakerName = model.TakerName.Trim();
         nfse.TakerCountry = Clean(model.TakerCountry);
@@ -189,19 +192,20 @@ public class NfseService(AppDbContext db) : INfseService
         nfse.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
-        return NfseActionResult.Ok("NFS-e draft saved.", id);
+        return NfseActionResult.Ok(T("NFS-e draft saved."), id);
     }
 
     public async Task<NfseActionResult> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var nfse = await db.Nfses.FindAsync([id], cancellationToken);
         if (nfse is null)
-            return NfseActionResult.Fail("NFS-e not found.");
+            return NfseActionResult.Fail(T("NFS-e not found."));
 
         db.Nfses.Remove(nfse);
         await db.SaveChangesAsync(cancellationToken);
-        var label = nfse.Status == NfseStatus.Draft ? "NFS-e draft" : $"NFS-e nº {nfse.Number}";
-        return NfseActionResult.Ok($"{label} deleted.");
+        return NfseActionResult.Ok(nfse.Status == NfseStatus.Draft
+            ? T("NFS-e draft deleted.")
+            : T("NFS-e nº {0} deleted.", nfse.Number));
     }
 
     public async Task<NfseImportPreview> PreviewImportAsync(string fileName, byte[] content, CancellationToken cancellationToken = default)
@@ -239,18 +243,18 @@ public class NfseService(AppDbContext db) : INfseService
         }
 
         if (string.IsNullOrWhiteSpace(data.Number))
-            return NfseActionResult.Fail($"{fileName}: the XML has no NFS-e number (it was not issued yet).");
+            return NfseActionResult.Fail($"{fileName}: {T("the XML has no NFS-e number (it was not issued yet).")}");
 
         var duplicate = await FindDuplicateAsync(data, cancellationToken);
         if (duplicate is not null)
             return NfseActionResult.Fail(
-                $"{fileName}: NFS-e nº {data.Number} was already imported (invoice {duplicate.Invoice.InvoiceNumber}).", duplicate.Id);
+                $"{fileName}: {T("NFS-e nº {0} was already imported (invoice {1}).", data.Number, duplicate.Invoice.InvoiceNumber)}", duplicate.Id);
 
         var invoice = await db.Invoices.FindAsync([invoiceId], cancellationToken);
         if (invoice is null)
-            return NfseActionResult.Fail($"{fileName}: invoice not found.");
+            return NfseActionResult.Fail($"{fileName}: {T("invoice not found.")}");
         if (invoice.Status == InvoiceStatus.Cancelled)
-            return NfseActionResult.Fail($"{fileName}: invoice {invoice.InvoiceNumber} is cancelled.");
+            return NfseActionResult.Fail($"{fileName}: {T("invoice {0} is cancelled.", invoice.InvoiceNumber)}");
 
         var linked = await db.Nfses.Where(x => x.InvoiceId == invoiceId).ToListAsync(cancellationToken);
         if (data.Status == NfseStatus.Issued)
@@ -258,8 +262,7 @@ public class NfseService(AppDbContext db) : INfseService
             var issued = linked.FirstOrDefault(x => x.Status == NfseStatus.Issued);
             if (issued is not null)
                 return NfseActionResult.Fail(
-                    $"{fileName}: invoice {invoice.InvoiceNumber} already has the issued NFS-e nº {issued.Number}. " +
-                    "If it was replaced, import its XML again with the new status or delete it first.");
+                    $"{fileName}: {T("invoice {0} already has the issued NFS-e nº {1}. If it was replaced, import its XML again with the new status or delete it first.", invoice.InvoiceNumber, issued.Number)}");
         }
 
         // An issued note takes the place of the draft prepared for the same invoice.
@@ -284,10 +287,11 @@ public class NfseService(AppDbContext db) : INfseService
         var company = await db.CompanySettings.FirstOrDefaultAsync(cancellationToken);
         var companyCnpj = Digits(company?.Cnpj);
         if (companyCnpj.Length >= 8 && companyCnpj[..8].Trim('0').Length > 0 && Digits(data.ProviderCnpj) is var xmlCnpj && xmlCnpj.Length > 0 && xmlCnpj != companyCnpj)
-            warnings.Add($"{fileName}: the provider CNPJ in the XML ({data.ProviderCnpj}) is not the company CNPJ in Settings.");
+            warnings.Add($"{fileName}: {T("the provider CNPJ in the XML ({0}) is not the company CNPJ in Settings.", data.ProviderCnpj)}");
 
-        var message = $"NFS-e nº {data.Number} imported and linked to invoice {invoice.InvoiceNumber}" +
-                      (replacedDraft ? " (it replaced the draft)." : ".");
+        var message = replacedDraft
+            ? T("NFS-e nº {0} imported and linked to invoice {1} (it replaced the draft).", data.Number, invoice.InvoiceNumber)
+            : T("NFS-e nº {0} imported and linked to invoice {1}.", data.Number, invoice.InvoiceNumber);
         return NfseActionResult.Ok(message, nfse.Id, warnings);
     }
 

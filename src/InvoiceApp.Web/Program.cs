@@ -66,6 +66,21 @@ app.MapGet("/api/invoices/{id:int}/pdf", async (int id, IInvoiceService invoiceS
     }
 });
 
+// Changes the language of the screens and goes back to the page the user was on.
+app.MapGet("/language/{code}", async (string code, string? returnUrl, AppDbContext db) =>
+{
+    if (!Ui.IsSupported(code))
+        return Results.NotFound();
+
+    Ui.Language = code;
+    await db.CompanySettings.ExecuteUpdateAsync(s => s.SetProperty(x => x.Language, Ui.Language));
+
+    var target = returnUrl is { Length: > 0 } && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//") && !returnUrl.StartsWith("/\\")
+        ? returnUrl
+        : "/";
+    return Results.LocalRedirect(target);
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

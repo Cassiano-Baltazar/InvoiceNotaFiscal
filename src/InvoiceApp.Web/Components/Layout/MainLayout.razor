@@ -1,15 +1,24 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
 <div class="app-shell">
     <nav class="sidebar">
         <div class="brand">Invoice App</div>
-        <NavLink href="/" Match="NavLinkMatch.All">Dashboard</NavLink>
-        <NavLink href="/clients">Clients</NavLink>
-        <NavLink href="/invoices">Invoices</NavLink>
-        <NavLink href="/invoices/generate">Generate Month</NavLink>
+        <NavLink href="/" Match="NavLinkMatch.All">@T("Dashboard")</NavLink>
+        <NavLink href="/clients">@T("Clients")</NavLink>
+        <NavLink href="/invoices">@T("Invoices")</NavLink>
+        <NavLink href="/invoices/generate">@T("Generate Month")</NavLink>
         <NavLink href="/nfse">NFS-e</NavLink>
-        <NavLink href="/withdrawal">Monthly Withdrawal</NavLink>
-        <NavLink href="/settings">Settings</NavLink>
+        <NavLink href="/withdrawal">@T("Monthly Withdrawal")</NavLink>
+        <NavLink href="/settings">@T("Settings")</NavLink>
+        <div class="language-switch" data-field="language-switch">
+            <span>@T("Language")</span>
+            @foreach (var language in Ui.Languages)
+            {
+                <a href="@LanguageUrl(language.Code)" data-enhance-nav="false" data-language="@language.Code"
+                   class="@(language.Code == Ui.Language ? "active" : null)">@language.Short</a>
+            }
+        </div>
     </nav>
     <main class="content">
         @Body
@@ -17,7 +26,13 @@
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
+    @T("An unhandled error has occurred.")
+    <a href="." class="reload">@T("Reload")</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    // A full page load, so every screen (and the open circuit) renders again in the new language.
+    private string LanguageUrl(string code) =>
+        $"/language/{code}?returnUrl={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}";
+}

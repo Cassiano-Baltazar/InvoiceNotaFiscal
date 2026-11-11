@@ -3,32 +3,32 @@
 @inject IInvoiceService InvoiceService
 @inject IClientService ClientService
 
-<PageTitle>Generate Invoices</PageTitle>
+<PageTitle>@T("Generate Invoices")</PageTitle>
 
-<h1>Generate Monthly Invoices</h1>
+<h1>@T("Generate Monthly Invoices")</h1>
 
-<p>Creates one invoice per active client for the selected issue month. Service month will be the previous month.</p>
+<p>@T("Creates one invoice per active client for the selected issue month. Service month will be the previous month.")</p>
 
 <div class="form-grid narrow">
     <div class="form-field">
-        <label>Issue Year</label>
+        <label>@T("Issue Year")</label>
         <InputNumber @bind-Value="issueYear" class="input" />
     </div>
     <div class="form-field">
-        <label>Issue Month</label>
+        <label>@T("Issue Month")</label>
         <InputNumber @bind-Value="issueMonth" class="input" min="1" max="12" />
     </div>
     <div class="form-field">
         <label>
-            <InputCheckbox @bind-Value="exportPdf" /> Export PDF to output folder
+            <InputCheckbox @bind-Value="exportPdf" /> @T("Export PDF to output folder")
         </label>
     </div>
 </div>
 
 <div class="preview-box">
-    <p><strong>Service month:</strong> @GetServiceMonthLabel()</p>
-    <p><strong>Active clients:</strong> @activeClients</p>
-    <p><strong>Invoice numbers:</strong> INV-@issueYear-@issueMonth.ToString("D2")-xxx</p>
+    <p><strong>@T("Service month:")</strong> @GetServiceMonthLabel()</p>
+    <p><strong>@T("Active clients:")</strong> @activeClients</p>
+    <p><strong>@T("Invoice numbers:")</strong> INV-@issueYear-@issueMonth.ToString("D2")-xxx</p>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(message))
@@ -58,9 +58,9 @@
 
 <div class="actions-row">
     <button class="btn btn-primary" @onclick="GenerateAsync" disabled="@isGenerating">
-        @(isGenerating ? "Generating..." : "Generate Invoices")
+        @(isGenerating ? T("Generating...") : T("Generate Invoices"))
     </button>
-    <a class="btn btn-secondary" href="/invoices">Back to Invoices</a>
+    <a class="btn btn-secondary" href="/invoices">@T("Back to Invoices")</a>
 </div>
 
 @code {
@@ -82,7 +82,7 @@
     private string GetServiceMonthLabel()
     {
         var serviceDate = new DateOnly(issueYear, issueMonth, 1).AddMonths(-1);
-        return serviceDate.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        return Ui.MonthYear(serviceDate);
     }
 
     private async Task GenerateAsync()
@@ -104,12 +104,12 @@
             createdNumbers.AddRange(result.InvoiceNumbers);
             errors.AddRange(result.Errors);
             message = result.CreatedCount > 0
-                ? $"{result.CreatedCount} invoice(s) generated successfully."
-                : "No invoices were generated.";
+                ? T("{0} invoice(s) generated successfully.", result.CreatedCount)
+                : T("No invoices were generated.");
         }
         catch (Exception ex)
         {
-            message = $"Error: {ex.Message}";
+            message = T("Error: {0}", ex.Message);
         }
         finally
         {

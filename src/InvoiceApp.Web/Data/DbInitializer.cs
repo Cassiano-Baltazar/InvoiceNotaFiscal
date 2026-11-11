@@ -1,5 +1,6 @@
 using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
+using InvoiceApp.Web.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceApp.Web.Data;
@@ -13,7 +14,9 @@ public static class DbInitializer
         await db.Database.EnsureCreatedAsync();
         await SchemaUpgrader.UpgradeAsync(db);
 
-        if (await db.CompanySettings.AnyAsync())
+        var existing = await db.CompanySettings.AsNoTracking().FirstOrDefaultAsync();
+        Ui.Language = existing?.Language ?? Ui.English;
+        if (existing is not null)
             return;
 
         var outputBasePath = Directory.GetParent(contentRootPath)?.Parent?.Parent?.FullName

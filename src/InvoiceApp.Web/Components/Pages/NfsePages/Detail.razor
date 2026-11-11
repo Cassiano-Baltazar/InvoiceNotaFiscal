@@ -11,16 +11,16 @@
 
 @if (nfse is null)
 {
-    <p>@(loaded ? "NFS-e not found." : "Loading...")</p>
-    <a class="btn btn-secondary" href="/nfse">Back to NFS-e</a>
+    <p>@(loaded ? T("NFS-e not found.") : T("Loading..."))</p>
+    <a class="btn btn-secondary" href="/nfse">@T("Back to NFS-e")</a>
 }
 else
 {
     <div class="page-header">
         <div>
-            <h1>@(nfse.Status == NfseStatus.Draft ? "NFS-e Draft" : $"NFS-e nº {NfseLabels.Number(nfse)}")</h1>
+            <h1>@(nfse.Status == NfseStatus.Draft ? T("NFS-e Draft") : $"NFS-e nº {NfseLabels.Number(nfse)}")</h1>
             <p>
-                Invoice <a href="/invoices/@nfse.InvoiceId">@nfse.Invoice.InvoiceNumber</a>
+                @T("Invoice") <a href="/invoices/@nfse.InvoiceId">@nfse.Invoice.InvoiceNumber</a>
                 (@nfse.Invoice.Total.ToString("N2") @nfse.Invoice.Currency) · <NfseStatusBadge Status="nfse.Status" />
             </p>
         </div>
@@ -28,21 +28,21 @@ else
             @if (nfse.Status == NfseStatus.Draft)
             {
                 <button class="btn btn-success" data-action="issue-nfse" disabled="@issuing" @onclick="IssueAsync">
-                    @(issuing ? "Issuing..." : environment == NfseEnvironment.Production ? "Issue NFS-e" : "Issue Test NFS-e")
+                    @(issuing ? T("Issuing...") : environment == NfseEnvironment.Production ? T("Issue NFS-e") : T("Issue Test NFS-e"))
                 </button>
-                <a class="btn btn-secondary" href="/nfse/import?invoiceId=@nfse.InvoiceId" data-action="import-for-invoice">Import Issued XML</a>
+                <a class="btn btn-secondary" href="/nfse/import?invoiceId=@nfse.InvoiceId" data-action="import-for-invoice">@T("Import Issued XML")</a>
             }
             @if (nfse.Status != NfseStatus.Draft && !string.IsNullOrWhiteSpace(nfse.XmlContent))
             {
                 <button class="btn btn-secondary" data-action="save-nfse-files" disabled="@savingFiles" @onclick="SaveFilesAsync">
-                    @(savingFiles ? "Saving..." : "Save XML and PDF")
+                    @(savingFiles ? T("Saving...") : T("Save XML and PDF"))
                 </button>
             }
             @if (!string.IsNullOrWhiteSpace(nfse.Link))
             {
-                <a class="btn btn-secondary" href="@nfse.Link" target="_blank">Open on City Hall Portal</a>
+                <a class="btn btn-secondary" href="@nfse.Link" target="_blank">@T("Open on City Hall Portal")</a>
             }
-            <button class="btn btn-danger" data-action="delete-nfse" @onclick="DeleteAsync">Delete</button>
+            <button class="btn btn-danger" data-action="delete-nfse" @onclick="DeleteAsync">@T("Delete")</button>
         </div>
     </div>
 
@@ -56,35 +56,34 @@ else
     }
     @if (nfse.Status == NfseStatus.Draft && !string.IsNullOrWhiteSpace(nfse.IssueError) && nfse.IssueError != message)
     {
-        <p class="message message-error" data-field="issue-error">Last attempt: @nfse.IssueError</p>
+        <p class="message message-error" data-field="issue-error">@T("Last attempt: {0}", nfse.IssueError)</p>
     }
 
     @if (nfse.Status == NfseStatus.Draft)
     {
-        <p class="hint">Not issued yet. Fill in the amounts and the taker data, save, and issue it through the Emissor Nacional
-            (@NfseLabels.Environment(environment), see Settings).</p>
+        <p class="hint">@T("Not issued yet. Fill in the amounts and the taker data, save, and issue it through the Emissor Nacional ({0}, see Settings).", NfseLabels.Environment(environment))</p>
 
         <EditForm Model="model" OnValidSubmit="SaveAsync">
-            <h2>Taker</h2>
+            <h2>@T("Taker")</h2>
             <div class="form-grid">
                 <div class="form-field">
-                    <label>Name</label>
+                    <label>@T("Name")</label>
                     <InputText @bind-Value="model.TakerName" class="input" data-field="taker-name" />
                 </div>
                 <div class="form-field">
-                    <label>Country</label>
+                    <label>@T("Country")</label>
                     <InputText @bind-Value="model.TakerCountry" class="input" />
                 </div>
                 <div class="form-field">
-                    <label>Country Code</label>
+                    <label>@T("Country Code")</label>
                     <InputText @bind-Value="model.TakerCountryCode" class="input" placeholder="CA, GB, US..." maxlength="2" />
                 </div>
                 <div class="form-field">
-                    <label>Tax ID (NIF)</label>
+                    <label>@T("Tax ID (NIF)")</label>
                     <InputText @bind-Value="model.TakerTaxId" class="input" data-field="taker-tax-id" />
                 </div>
                 <div class="form-field">
-                    <label>Reason for no Tax ID</label>
+                    <label>@T("Reason for no Tax ID")</label>
                     <InputSelect @bind-Value="model.TakerMissingTaxIdReason" class="input" disabled="@(!string.IsNullOrWhiteSpace(model.TakerTaxId))">
                         <option value="">—</option>
                         @foreach (var reason in Enum.GetValues<MissingTaxIdReason>())
@@ -95,56 +94,56 @@ else
                 </div>
             </div>
 
-            <h2>Service</h2>
+            <h2>@T("Service")</h2>
             <div class="form-grid">
                 <div class="form-field full-width">
-                    <label>Description</label>
+                    <label>@T("Description")</label>
                     <InputTextArea @bind-Value="model.Description" class="input" rows="2" data-field="description" />
                 </div>
                 <div class="form-field full-width">
-                    <label>Notes</label>
+                    <label>@T("Notes")</label>
                     <InputTextArea @bind-Value="model.Notes" class="input" rows="2" />
                 </div>
                 <div class="form-field">
-                    <label>Service Date</label>
+                    <label>@T("Service Date")</label>
                     <InputDate @bind-Value="model.ServiceDate" class="input" />
                 </div>
                 <div class="form-field">
-                    <label>National Tax Code</label>
+                    <label>@T("National Tax Code")</label>
                     <InputText @bind-Value="model.NationalTaxCode" class="input" maxlength="6" placeholder="010101" data-field="national-tax-code" />
                 </div>
                 <div class="form-field">
-                    <label>NBS Code</label>
+                    <label>@T("NBS Code")</label>
                     <InputText @bind-Value="model.NbsCode" class="input" />
                 </div>
             </div>
 
-            <h2>Amount</h2>
+            <h2>@T("Amount")</h2>
             <div class="form-grid">
                 <div class="form-field">
-                    <label>Currency</label>
+                    <label>@T("Currency")</label>
                     <InputText @bind-Value="model.CurrencyCode" class="input" placeholder="GBP, CAD, USD..." maxlength="3" data-field="currency-code" />
                 </div>
                 <div class="form-field">
-                    <label>Amount (@(model.CurrencyCode ?? nfse.Invoice.Currency))</label>
+                    <label>@T("Amount ({0})", model.CurrencyCode ?? nfse.Invoice.Currency)</label>
                     <InputNumber @bind-Value="model.AmountForeign" @bind-Value:after="UpdateAmountBrl" class="input" data-field="amount-foreign" />
                 </div>
                 <div class="form-field">
-                    <label>Exchange Rate (BRL per @(model.CurrencyCode ?? nfse.Invoice.Currency))</label>
+                    <label>@T("Exchange Rate (BRL per {0})", model.CurrencyCode ?? nfse.Invoice.Currency)</label>
                     <input class="input" type="number" step="0.0001" data-field="exchange-rate"
                            value="@exchangeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                            @onchange="OnExchangeRateChanged" />
                 </div>
                 <div class="form-field">
-                    <label>Amount (BRL)</label>
+                    <label>@T("Amount (BRL)")</label>
                     <InputNumber @bind-Value="model.AmountBrl" @bind-Value:after="UpdateExchangeRate" class="input" data-field="amount-brl" />
                 </div>
             </div>
 
-            <h2>Foreign Trade</h2>
+            <h2>@T("Foreign Trade")</h2>
             <div class="form-grid">
                 <div class="form-field">
-                    <label>Service Mode</label>
+                    <label>@T("Service Mode")</label>
                     <InputSelect @bind-Value="model.ServiceMode" class="input" data-field="service-mode">
                         @foreach (var mode in Enum.GetValues<ForeignServiceMode>())
                         {
@@ -154,14 +153,14 @@ else
                 </div>
                 <div class="form-field">
                     <label>
-                        <InputCheckbox @bind-Value="model.RelatedToTaker" /> Company is related to the taker (same group, parent, branch...)
+                        <InputCheckbox @bind-Value="model.RelatedToTaker" /> @T("Company is related to the taker (same group, parent, branch...)")
                     </label>
                 </div>
             </div>
 
             <div class="actions-row">
-                <button class="btn btn-primary" type="submit" data-action="save-nfse">Save Draft</button>
-                <a class="btn btn-secondary" href="/nfse">Back</a>
+                <button class="btn btn-primary" type="submit" data-action="save-nfse">@T("Save Draft")</button>
+                <a class="btn btn-secondary" href="/nfse">@T("Back")</a>
             </div>
         </EditForm>
     }
@@ -169,45 +168,45 @@ else
     {
         <div class="invoice-grid">
             <div class="invoice-card">
-                <strong>Identification</strong>
-                <p><strong>Number / Series:</strong> @NfseLabels.Number(nfse)</p>
-                <p><strong>Issued at:</strong> @nfse.IssuedAt?.ToString("dd/MM/yyyy HH:mm:ss")</p>
-                <p><strong>Service date:</strong> @nfse.ServiceDate?.ToString("dd/MM/yyyy")</p>
-                <p><strong>Municipal status:</strong> @nfse.MunicipalStatusCode @nfse.MunicipalStatusDescription</p>
-                <p><strong>Verification code:</strong> <span class="break">@nfse.VerificationCode</span></p>
-                <p><strong>National access key:</strong> <span class="break">@nfse.NationalAccessKey</span></p>
-                <p><strong>Provider CNPJ:</strong> @nfse.ProviderCnpj</p>
-                <p><strong>Source:</strong> @NfseLabels.Source(nfse.Source)</p>
+                <strong>@T("Identification")</strong>
+                <p><strong>@T("Number / Series:")</strong> @NfseLabels.Number(nfse)</p>
+                <p><strong>@T("Issued at:")</strong> @nfse.IssuedAt?.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                <p><strong>@T("Service date:")</strong> @nfse.ServiceDate?.ToString("dd/MM/yyyy")</p>
+                <p><strong>@T("Municipal status:")</strong> @nfse.MunicipalStatusCode @nfse.MunicipalStatusDescription</p>
+                <p><strong>@T("Verification code:")</strong> <span class="break">@nfse.VerificationCode</span></p>
+                <p><strong>@T("National access key:")</strong> <span class="break">@nfse.NationalAccessKey</span></p>
+                <p><strong>@T("Provider CNPJ:")</strong> @nfse.ProviderCnpj</p>
+                <p><strong>@T("Source:")</strong> @NfseLabels.Source(nfse.Source)</p>
                 @if (!string.IsNullOrWhiteSpace(nfse.DpsId))
                 {
                     <p><strong>DPS:</strong> <span class="break">@nfse.DpsId</span></p>
                 }
             </div>
             <div class="invoice-card">
-                <strong>Taker and Service</strong>
-                <p><strong>Taker:</strong> @nfse.TakerName</p>
-                <p><strong>Country:</strong> @nfse.TakerCountry @(string.IsNullOrWhiteSpace(nfse.TakerCountryCode) ? "" : $"({nfse.TakerCountryCode})")</p>
-                <p><strong>Tax ID:</strong> @(nfse.TakerTaxId ?? (nfse.TakerMissingTaxIdReason is { } reason ? NfseLabels.TaxIdReasonLabel(reason) : "—"))</p>
-                <p><strong>Description:</strong> @nfse.Description</p>
+                <strong>@T("Taker and Service")</strong>
+                <p><strong>@T("Taker:")</strong> @nfse.TakerName</p>
+                <p><strong>@T("Country:")</strong> @nfse.TakerCountry @(string.IsNullOrWhiteSpace(nfse.TakerCountryCode) ? "" : $"({nfse.TakerCountryCode})")</p>
+                <p><strong>@T("Tax ID:")</strong> @(nfse.TakerTaxId ?? (nfse.TakerMissingTaxIdReason is { } reason ? NfseLabels.TaxIdReasonLabel(reason) : "—"))</p>
+                <p><strong>@T("Description:")</strong> @nfse.Description</p>
                 @if (!string.IsNullOrWhiteSpace(nfse.Notes))
                 {
-                    <p><strong>Notes:</strong> @nfse.Notes</p>
+                    <p><strong>@T("Notes:")</strong> @nfse.Notes</p>
                 }
                 @if (nfse.Source == NfseSource.NationalApi)
                 {
-                    <p><strong>National tax code / NBS:</strong> @nfse.NationalTaxCode / @nfse.NbsCode</p>
+                    <p><strong>@T("National tax code / NBS:")</strong> @nfse.NationalTaxCode / @nfse.NbsCode</p>
                 }
                 else
                 {
-                    <p><strong>Activity / Item / NBS:</strong> @nfse.ActivityCode / @nfse.ServiceListItem / @nfse.NbsCode</p>
-                    <p><strong>Tax situation:</strong> @nfse.TaxSituation · <strong>ISS rate:</strong> @nfse.IssRate.ToString("0.00##")%</p>
+                    <p><strong>@T("Activity / Item / NBS:")</strong> @nfse.ActivityCode / @nfse.ServiceListItem / @nfse.NbsCode</p>
+                    <p><strong>@T("Tax situation:")</strong> @nfse.TaxSituation · <strong>@T("ISS rate:")</strong> @nfse.IssRate.ToString("0.00##")%</p>
                 }
             </div>
             <div class="invoice-card">
-                <strong>Amounts (BRL)</strong>
-                <p><strong>Total:</strong> @NfseLabels.Brl(nfse.AmountBrl)</p>
-                <p><strong>Foreign amount:</strong> @(nfse.AmountForeign > 0 ? $"{nfse.AmountForeign:N2} {nfse.CurrencyCode}" : "—")</p>
-                <p><strong>Exchange rate:</strong> @(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</p>
+                <strong>@T("Amounts (BRL)")</strong>
+                <p><strong>@T("Total:")</strong> @NfseLabels.Brl(nfse.AmountBrl)</p>
+                <p><strong>@T("Foreign amount:")</strong> @(nfse.AmountForeign > 0 ? $"{nfse.AmountForeign:N2} {nfse.CurrencyCode}" : "—")</p>
+                <p><strong>@T("Exchange rate:")</strong> @(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</p>
                 @if (nfse.Source != NfseSource.NationalApi)
                 {
                     <p><strong>IR:</strong> @NfseLabels.Brl(nfse.IrAmount)</p>
@@ -215,7 +214,7 @@ else
                     <p><strong>CSLL:</strong> @NfseLabels.Brl(nfse.CsllAmount)</p>
                     <p><strong>PIS:</strong> @NfseLabels.Brl(nfse.PisAmount)</p>
                     <p><strong>COFINS:</strong> @NfseLabels.Brl(nfse.CofinsAmount)</p>
-                    <p><strong>ISS withheld:</strong> @NfseLabels.Brl(nfse.IssWithheldAmount)</p>
+                    <p><strong>@T("ISS withheld:")</strong> @NfseLabels.Brl(nfse.IssWithheldAmount)</p>
                 }
             </div>
         </div>
@@ -223,7 +222,7 @@ else
         @if (!string.IsNullOrWhiteSpace(nfse.XmlContent))
         {
             <details class="xml-source">
-                <summary>Original XML (@nfse.FileName)</summary>
+                <summary>@T("Original XML") (@nfse.FileName)</summary>
                 <pre>@nfse.XmlContent</pre>
             </details>
         }
@@ -300,8 +299,8 @@ else
             return;
 
         var question = environment == NfseEnvironment.Production
-            ? $"Issue this NFS-e for real ({NfseLabels.Brl(model.AmountBrl)})? Save your changes first. A note issued in production can only be cancelled through the Emissor Nacional."
-            : "Send this draft as a TEST note to the restricted production environment? It has no fiscal value. Save your changes first.";
+            ? T("Issue this NFS-e for real ({0})? Save your changes first. A note issued in production can only be cancelled through the Emissor Nacional.", NfseLabels.Brl(model.AmountBrl))
+            : T("Send this draft as a TEST note to the restricted production environment? It has no fiscal value. Save your changes first.");
         if (!await JS.InvokeAsync<bool>("confirm", question))
             return;
 
@@ -347,7 +346,7 @@ else
 
     private async Task DeleteAsync()
     {
-        if (nfse is null || !await JS.InvokeAsync<bool>("confirm", "Delete this NFS-e from the app? The note on the city hall portal is not affected."))
+        if (nfse is null || !await JS.InvokeAsync<bool>("confirm", T("Delete this NFS-e from the app? The note on the city hall portal is not affected.")))
             return;
 
         var result = await NfseService.DeleteAsync(Id);

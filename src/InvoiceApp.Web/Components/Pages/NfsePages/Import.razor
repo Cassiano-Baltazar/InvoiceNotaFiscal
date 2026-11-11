@@ -2,12 +2,12 @@
 @rendermode InteractiveServer
 @inject INfseService NfseService
 
-<PageTitle>Import NFS-e XML</PageTitle>
+<PageTitle>@T("Import NFS-e XML")</PageTitle>
 
-<h1>Import NFS-e XML</h1>
+<h1>@T("Import NFS-e XML")</h1>
 
-<p>Select the XML files downloaded from the city hall portal (you can select every file of the NFSe folder at once).
-    For each note, choose the invoice it belongs to. A suggestion is made from the client name and the service month.</p>
+<p>@T("Select the XML files downloaded from the city hall portal (you can select every file of the NFSe folder at once).")
+    @T("For each note, choose the invoice it belongs to. A suggestion is made from the client name and the service month.")</p>
 
 <div class="form-field">
     <InputFile OnChange="OnFilesSelectedAsync" multiple accept=".xml" class="input" data-field="xml-files" />
@@ -23,15 +23,15 @@
     <table class="data-table import-table">
         <thead>
             <tr>
-                <th>File</th>
+                <th>@T("File")</th>
                 <th>NFS-e</th>
-                <th>Issued</th>
-                <th>Taker</th>
-                <th>Description</th>
-                <th>Amount (BRL)</th>
-                <th>Status</th>
-                <th>Invoice</th>
-                <th>Result</th>
+                <th>@T("Issued")</th>
+                <th>@T("Taker")</th>
+                <th>@T("Description")</th>
+                <th>@T("Amount (BRL)")</th>
+                <th>@T("Status")</th>
+                <th>@T("Invoice")</th>
+                <th>@T("Result")</th>
             </tr>
         </thead>
         <tbody>
@@ -57,7 +57,7 @@
                             @if (row.Preview.CanImport && row.Result is null)
                             {
                                 <select class="input invoice-select" @bind="row.InvoiceId">
-                                    <option value="0">Select an invoice...</option>
+                                    <option value="0">@T("Select an invoice...")</option>
                                     @foreach (var option in options)
                                     {
                                         <option value="@option.Id">@option.Label</option>
@@ -65,12 +65,12 @@
                                 </select>
                                 @if (row.Preview.SuggestedInvoiceId is not null && row.InvoiceId == row.Preview.SuggestedInvoiceId)
                                 {
-                                    <div class="hint">Suggested</div>
+                                    <div class="hint">@T("Suggested")</div>
                                 }
                             }
                             else if (row.Preview.AlreadyImported is { } existing)
                             {
-                                <span>Already imported (<a href="/invoices/@existing.InvoiceId">@existing.Invoice.InvoiceNumber</a>)</span>
+                                <span>@T("Already imported") (<a href="/invoices/@existing.InvoiceId">@existing.Invoice.InvoiceNumber</a>)</span>
                             }
                         </td>
                     }
@@ -95,9 +95,9 @@
 
     <div class="actions-row">
         <button class="btn btn-primary" data-action="import" disabled="@(!rows.Any(r => r.IsReady) || isImporting)" @onclick="ImportAsync">
-            Import @rows.Count(r => r.IsReady) NFS-e
+            @T("Import {0} NFS-e", rows.Count(r => r.IsReady))
         </button>
-        <a class="btn btn-secondary" href="/nfse">Back to NFS-e</a>
+        <a class="btn btn-secondary" href="/nfse">@T("Back to NFS-e")</a>
     </div>
 }
 
@@ -134,7 +134,7 @@
             }
             catch (Exception ex)
             {
-                rows.Add(new ImportRow(new NfseImportPreview { FileName = file.Name, Error = $"Could not read the file: {ex.Message}" }));
+                rows.Add(new ImportRow(new NfseImportPreview { FileName = file.Name, Error = T("Could not read the file: {0}", ex.Message) }));
                 continue;
             }
 
@@ -160,7 +160,7 @@
             var imported = rows.Count(r => r.Result?.Success == true);
             var failed = rows.Count(r => r.Result?.Success == false);
             isError = failed > 0;
-            message = failed > 0 ? $"{imported} imported, {failed} with errors." : $"{imported} NFS-e imported.";
+            message = failed > 0 ? T("{0} imported, {1} with errors.", imported, failed) : T("{0} NFS-e imported.", imported);
         }
         finally
         {

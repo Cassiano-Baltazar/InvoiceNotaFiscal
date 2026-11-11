@@ -3,31 +3,31 @@
 @inject IClientService ClientService
 @inject NavigationManager Navigation
 
-<PageTitle>Clients</PageTitle>
+<PageTitle>@T("Clients")</PageTitle>
 
 <div class="page-header">
-    <h1>Clients</h1>
-    <a class="btn btn-primary" href="/clients/new">New Client</a>
+    <h1>@T("Clients")</h1>
+    <a class="btn btn-primary" href="/clients/new">@T("New Client")</a>
 </div>
 
 @if (clients is null)
 {
-    <p>Loading...</p>
+    <p>@T("Loading...")</p>
 }
 else if (clients.Count == 0)
 {
-    <p>No clients registered yet.</p>
+    <p>@T("No clients registered yet.")</p>
 }
 else
 {
     <table class="data-table">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Country</th>
-                <th>Currency</th>
-                <th>Monthly Amount</th>
-                <th>Status</th>
+                <th>@T("Name")</th>
+                <th>@T("Country")</th>
+                <th>@T("Currency")</th>
+                <th>@T("Monthly Amount")</th>
+                <th>@T("Status")</th>
                 <th></th>
             </tr>
         </thead>
@@ -39,8 +39,8 @@ else
                     <td>@client.Country</td>
                     <td>@client.Currency</td>
                     <td>@client.MonthlyAmount.ToString("N2")</td>
-                    <td>@(client.IsActive ? "Active" : "Inactive")</td>
-                    <td><a href="/clients/@client.Id">Edit</a></td>
+                    <td>@(client.IsActive ? T("Active") : T("Inactive"))</td>
+                    <td><a href="/clients/@client.Id">@T("Edit")</a></td>
                 </tr>
             }
         </tbody>

@@ -4,27 +4,27 @@
 <div class="actions-row invoice-actions @(Compact ? "compact" : null)">
     @if (InvoiceRules.CanEdit(Invoice.Status))
     {
-        <a class="btn btn-secondary" href="/invoices/@Invoice.Id/edit" data-action="edit">Edit</a>
+        <a class="btn btn-secondary" href="/invoices/@Invoice.Id/edit" data-action="edit">@T("Edit")</a>
     }
     @if (InvoiceRules.CanMarkAsSent(Invoice.Status))
     {
-        <button class="btn btn-secondary" data-action="mark-sent" disabled="@isBusy" @onclick="MarkAsSentAsync">Mark as Sent</button>
+        <button class="btn btn-secondary" data-action="mark-sent" disabled="@isBusy" @onclick="MarkAsSentAsync">@T("Mark as Sent")</button>
     }
     @if (InvoiceRules.CanMarkAsPaid(Invoice.Status))
     {
-        <button class="btn btn-success" data-action="mark-paid" disabled="@isBusy" @onclick="MarkAsPaidAsync">Mark as Paid</button>
+        <button class="btn btn-success" data-action="mark-paid" disabled="@isBusy" @onclick="MarkAsPaidAsync">@T("Mark as Paid")</button>
     }
     @if (InvoiceRules.CanCancel(Invoice.Status))
     {
-        <button class="btn btn-warning" data-action="cancel" disabled="@isBusy" @onclick="CancelAsync">Cancel Invoice</button>
+        <button class="btn btn-warning" data-action="cancel" disabled="@isBusy" @onclick="CancelAsync">@T("Cancel Invoice")</button>
     }
     @if (InvoiceRules.CanReactivate(Invoice.Status))
     {
-        <button class="btn btn-secondary" data-action="reactivate" disabled="@isBusy" @onclick="ReactivateAsync">Reactivate</button>
+        <button class="btn btn-secondary" data-action="reactivate" disabled="@isBusy" @onclick="ReactivateAsync">@T("Reactivate")</button>
     }
     @if (InvoiceRules.CanDelete(Invoice.Status))
     {
-        <button class="btn btn-danger" data-action="delete" disabled="@isBusy" @onclick="DeleteAsync">Delete</button>
+        <button class="btn btn-danger" data-action="delete" disabled="@isBusy" @onclick="DeleteAsync">@T("Delete")</button>
     }
 </div>
 
@@ -44,7 +44,7 @@
 
     private async Task CancelAsync()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"Cancel invoice {Invoice.InvoiceNumber}?"))
+        if (!await JS.InvokeAsync<bool>("confirm", T("Cancel invoice {0}?", Invoice.InvoiceNumber)))
             return;
 
         await RunAsync(() => InvoiceService.CancelAsync(Invoice.Id), OnChanged);
@@ -52,7 +52,7 @@
 
     private async Task DeleteAsync()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"Delete invoice {Invoice.InvoiceNumber}? This cannot be undone."))
+        if (!await JS.InvokeAsync<bool>("confirm", T("Delete invoice {0}? This cannot be undone.", Invoice.InvoiceNumber)))
             return;
 
         await RunAsync(() => InvoiceService.DeleteAsync(Invoice.Id), OnDeleted);

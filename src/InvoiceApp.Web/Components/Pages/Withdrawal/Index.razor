@@ -4,33 +4,33 @@
 @inject IWithdrawalService WithdrawalService
 @inject TimeProvider Time
 
-<PageTitle>Monthly Withdrawal</PageTitle>
+<PageTitle>@T("Monthly Withdrawal")</PageTitle>
 
 <div class="page-header">
-    <h1>Monthly Withdrawal</h1>
+    <h1>@T("Monthly Withdrawal")</h1>
     <div class="form-field">
-        <label>Month</label>
+        <label>@T("Month")</label>
         <input type="month" class="input" @bind="selectedMonth" @bind:after="LoadAsync" data-field="month" />
     </div>
 </div>
 
 @if (result is null)
 {
-    <p>Loading...</p>
+    <p>@T("Loading...")</p>
 }
 else
 {
     <div class="stats-grid">
         <div class="stat-card" data-stat="withdrawal">
-            <span>You can withdraw</span>
+            <span>@T("You can withdraw")</span>
             <strong>@NfseLabels.Brl(result.TotalWithdrawal)</strong>
         </div>
         <div class="stat-card" data-stat="reserve">
-            <span>Keep for taxes (due @result.DueDate.ToString("dd/MM/yyyy"))</span>
+            <span>@T("Keep for taxes (due {0})", result.DueDate.ToString("dd/MM/yyyy"))</span>
             <strong>@NfseLabels.Brl(result.TaxReserve)</strong>
         </div>
         <div class="stat-card" data-stat="revenue">
-            <span>Revenue of the month</span>
+            <span>@T("Revenue of the month")</span>
             <strong>@NfseLabels.Brl(result.Revenue)</strong>
         </div>
     </div>
@@ -40,66 +40,65 @@ else
         <p class="message message-warning">@warning</p>
     }
 
-    <h2>Calculation</h2>
+    <h2>@T("Calculation")</h2>
     <table class="data-table summary-table withdrawal-table">
         <tbody>
-            <tr><td>Notes issued in the month</td><td>@NfseLabels.Brl(result.NotesRevenue)</td></tr>
+            <tr><td>@T("Notes issued in the month")</td><td>@NfseLabels.Brl(result.NotesRevenue)</td></tr>
             @if (result.OtherRevenue > 0)
             {
-                <tr><td>Other revenue (outside the app)</td><td>@NfseLabels.Brl(result.OtherRevenue)</td></tr>
+                <tr><td>@T("Other revenue (outside the app)")</td><td>@NfseLabels.Brl(result.OtherRevenue)</td></tr>
             }
-            <tr><td><strong>Revenue</strong></td><td><strong>@NfseLabels.Brl(result.Revenue)</strong></td></tr>
-            <tr data-row="das"><td>(−) DAS @(result.DasGuideAmount is null ? $"({Percent(result.DasRate)}, estimated)" : "(guide)")</td><td>@NfseLabels.Brl(result.Das)</td></tr>
-            <tr><td>(−) Accountant</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
-            <tr><td>(−) Pró-labore gross (@result.ProLaboreRate.ToString("0.##", PtBr)%)</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
-            <tr data-row="profit"><td><strong>= Profit distribution (exempt)</strong></td><td><strong>@NfseLabels.Brl(Math.Max(0, result.Profit))</strong></td></tr>
+            <tr><td><strong>@T("Revenue")</strong></td><td><strong>@NfseLabels.Brl(result.Revenue)</strong></td></tr>
+            <tr data-row="das"><td>(−) DAS @(result.DasGuideAmount is null ? T("({0}, estimated)", Percent(result.DasRate)) : T("(guide)"))</td><td>@NfseLabels.Brl(result.Das)</td></tr>
+            <tr><td>@T("(−) Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
+            <tr><td>@T("(−) Pró-labore gross ({0}%)", result.ProLaboreRate.ToString("0.##", PtBr))</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
+            <tr data-row="profit"><td><strong>@T("= Profit distribution (exempt)")</strong></td><td><strong>@NfseLabels.Brl(Math.Max(0, result.Profit))</strong></td></tr>
         </tbody>
     </table>
 
     <h2>Pró-labore</h2>
     <table class="data-table summary-table">
         <tbody>
-            <tr><td>Gross</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
-            <tr><td>(−) INSS 11%</td><td>@NfseLabels.Brl(result.Inss)</td></tr>
+            <tr><td>@T("Gross")</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
+            <tr><td>@T("(−) INSS 11%")</td><td>@NfseLabels.Brl(result.Inss)</td></tr>
             <tr data-row="irrf"><td>(−) IRRF</td><td>@NfseLabels.Brl(result.Irrf)</td></tr>
-            <tr><td><strong>Net</strong></td><td><strong>@NfseLabels.Brl(result.ProLaboreNet)</strong></td></tr>
+            <tr><td><strong>@T("Net")</strong></td><td><strong>@NfseLabels.Brl(result.ProLaboreNet)</strong></td></tr>
         </tbody>
     </table>
-    <p class="hint">INSS and IRRF are paid together in one guide (@NfseLabels.Brl(result.PayrollTaxes)).</p>
+    <p class="hint">@T("INSS and IRRF are paid together in one guide ({0}).", NfseLabels.Brl(result.PayrollTaxes))</p>
 
-    <h2>Where the money goes</h2>
+    <h2>@T("Where the money goes")</h2>
     <table class="data-table summary-table">
         <tbody>
-            <tr><td>Pró-labore net</td><td>@NfseLabels.Brl(result.ProLaboreNet)</td></tr>
-            <tr><td>Profit distribution</td><td>@NfseLabels.Brl(Math.Max(0, result.Profit))</td></tr>
-            <tr><td><strong>Total to withdraw</strong></td><td><strong>@NfseLabels.Brl(result.TotalWithdrawal)</strong></td></tr>
-            <tr><td>DAS guide</td><td>@NfseLabels.Brl(result.Das)</td></tr>
-            <tr><td>INSS + IRRF guide</td><td>@NfseLabels.Brl(result.PayrollTaxes)</td></tr>
-            <tr><td>Accountant</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
+            <tr><td>@T("Pró-labore net")</td><td>@NfseLabels.Brl(result.ProLaboreNet)</td></tr>
+            <tr><td>@T("Profit distribution")</td><td>@NfseLabels.Brl(Math.Max(0, result.Profit))</td></tr>
+            <tr><td><strong>@T("Total to withdraw")</strong></td><td><strong>@NfseLabels.Brl(result.TotalWithdrawal)</strong></td></tr>
+            <tr><td>@T("DAS guide")</td><td>@NfseLabels.Brl(result.Das)</td></tr>
+            <tr><td>@T("INSS + IRRF guide")</td><td>@NfseLabels.Brl(result.PayrollTaxes)</td></tr>
+            <tr><td>@T("Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
         </tbody>
     </table>
 
     <h2>DAS</h2>
     <p class="hint" data-field="das-detail">
-        Revenue of the last 12 months (RBT12): @NfseLabels.Brl(result.Rbt12)@(result.Rbt12Annualized ? " (average since the start × 12)" : "").
-        Anexo III, bracket @result.Bracket.Number, nominal rate @result.Bracket.NominalRate.ToString("0.00", PtBr)%.
-        Without ISS, PIS and COFINS (exported services) the rate is @Percent(result.DasRate)
-        (@NfseLabels.Brl(result.EstimatedDas)).
+        @T("Revenue of the last 12 months (RBT12): {0}", NfseLabels.Brl(result.Rbt12))@(result.Rbt12Annualized ? " " + T("(average since the start × 12)") : "").
+        @T("Anexo III, bracket {0}, nominal rate {1}%.", result.Bracket.Number, result.Bracket.NominalRate.ToString("0.00", PtBr))
+        @T("Without ISS, PIS and COFINS (exported services) the rate is {0} ({1}).", Percent(result.DasRate), NfseLabels.Brl(result.EstimatedDas))
     </p>
 
     <div class="form-grid">
         <div class="form-field">
-            <label>DAS guide amount (R$)</label>
+            <label>@T("DAS guide amount (R$)")</label>
             <input type="number" step="0.01" class="input" @bind="dasGuideAmount" data-field="das-guide" />
-            <small>When the guide arrives, enter its amount and it replaces the estimate.</small>
+            <small>@T("When the guide arrives, enter its amount and it replaces the estimate.")</small>
         </div>
         <div class="form-field">
-            <label>Other revenue (R$)</label>
+            <label>@T("Other revenue (R$)")</label>
             <input type="number" step="0.01" class="input" @bind="otherRevenue" data-field="other-revenue" />
-            <small>Notes issued outside the app (e.g. on the city hall portal). Fill the earlier months too, so the RBT12 is right.</small>
+            <small>@T("Notes issued outside the app (e.g. on the city hall portal). Fill the earlier months too, so the RBT12 is right.")</small>
         </div>
         <div class="form-field actions-inline">
-            <button class="btn btn-primary" @onclick="SaveAsync" data-action="save-month">Save month</button>
+            <button class="btn btn-primary" @onclick="SaveAsync" data-action="save-month">@T("Save month")</button>
         </div>
     </div>
 
@@ -108,16 +107,16 @@ else
         <p class="message">@message</p>
     }
 
-    <h2>Notes of the month</h2>
+    <h2>@T("Notes of the month")</h2>
     @if (result.Notes.Count == 0)
     {
-        <p>No NFS-e issued in this month.</p>
+        <p>@T("No NFS-e issued in this month.")</p>
     }
     else
     {
         <table class="data-table">
             <thead>
-                <tr><th>Number</th><th>Issued</th><th>Taker</th><th>Amount (BRL)</th></tr>
+                <tr><th>@T("Number")</th><th>@T("Issued")</th><th>@T("Taker")</th><th>@T("Amount (BRL)")</th></tr>
             </thead>
             <tbody>
                 @foreach (var nfse in result.Notes)
@@ -133,8 +132,8 @@ else
         </table>
     }
 
-    <p class="hint">Estimate for a Simples Nacional company in Anexo III with Fator R, exporting its services, with 2026 INSS and IRRF tables.
-        Confirm the amounts with your accountant.</p>
+    <p class="hint">@T("Estimate for a Simples Nacional company in Anexo III with Fator R, exporting its services, with 2026 INSS and IRRF tables.")
+        @T("Confirm the amounts with your accountant.")</p>
 }
 
 @code {
@@ -169,7 +168,7 @@ else
         var (year, month) = Selected();
         await WithdrawalService.SaveMonthAsync(year, month, otherRevenue ?? 0m, dasGuideAmount);
         await LoadAsync();
-        message = "Month saved.";
+        message = T("Month saved.");
     }
 
     private static string Percent(decimal fraction) => (fraction * 100m).ToString("0.00", PtBr) + "%";

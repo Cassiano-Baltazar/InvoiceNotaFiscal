@@ -32,6 +32,9 @@ public class CompanySettings
     public DateOnly? CompanyStartDate { get; set; }
     public decimal AccountantMonthlyFee { get; set; }
     public decimal ProLaboreRate { get; set; } = 28m;
+
+    // Language of the app screens: "en" or "pt" (see Ui).
+    public string Language { get; set; } = "en";
 }
 
 /// <summary>Environment of the national NFS-e API. Values are the tpAmb codes of the DPS.</summary>

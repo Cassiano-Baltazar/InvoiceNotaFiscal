@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using InvoiceApp.Web.Data.Entities;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -55,7 +56,7 @@ public static class NfseXmlParser
         }
         catch (XmlException ex)
         {
-            throw new FormatException($"Invalid XML: {ex.Message}", ex);
+            throw new FormatException(T("Invalid XML: {0}", ex.Message), ex);
         }
 
         return Parse(document);
@@ -67,9 +68,9 @@ public static class NfseXmlParser
     {
         var root = document.Root;
         if (root is null || root.Name.LocalName != "nfse")
-            throw new FormatException("This file is not an NFS-e XML (missing <nfse> root).");
+            throw new FormatException(T("This file is not an NFS-e XML (missing <nfse> root)."));
 
-        var nf = root.Element("nf") ?? throw new FormatException("This file is not an NFS-e XML (missing <nf>).");
+        var nf = root.Element("nf") ?? throw new FormatException(T("This file is not an NFS-e XML (missing <nf>)."));
         var provider = root.Element("prestador");
         var taker = root.Element("tomador");
         var items = root.Element("itens")?.Elements("lista").ToList() ?? [];

@@ -13,64 +13,64 @@
 
     <div class="form-grid">
         <div class="form-field">
-            <label>Name</label>
+            <label>@T("Name")</label>
             <InputText @bind-Value="model.Name" class="input" />
         </div>
         <div class="form-field">
-            <label>Address Line 1</label>
+            <label>@T("Address Line 1")</label>
             <InputText @bind-Value="model.AddressLine1" class="input" />
         </div>
         <div class="form-field">
-            <label>Address Line 2</label>
+            <label>@T("Address Line 2")</label>
             <InputText @bind-Value="model.AddressLine2" class="input" />
         </div>
         <div class="form-field">
-            <label>Address Line 3</label>
+            <label>@T("Address Line 3")</label>
             <InputText @bind-Value="model.AddressLine3" class="input" />
         </div>
         <div class="form-field">
-            <label>City</label>
+            <label>@T("City")</label>
             <InputText @bind-Value="model.City" class="input" />
         </div>
         <div class="form-field">
-            <label>Region</label>
+            <label>@T("Region")</label>
             <InputText @bind-Value="model.Region" class="input" />
         </div>
         <div class="form-field">
-            <label>Postal Code</label>
+            <label>@T("Postal Code")</label>
             <InputText @bind-Value="model.PostalCode" class="input" />
         </div>
         <div class="form-field">
-            <label>Country</label>
+            <label>@T("Country")</label>
             <InputText @bind-Value="model.Country" class="input" />
         </div>
         <div class="form-field">
-            <label>Currency</label>
+            <label>@T("Currency")</label>
             <InputText @bind-Value="model.Currency" class="input" placeholder="CAD, GBP..." />
         </div>
         <div class="form-field">
-            <label>Currency Label</label>
-            <InputText @bind-Value="model.CurrencyLabel" class="input" placeholder="Canadian Dollars" />
+            <label>@T("Currency Label")</label>
+            <InputText @bind-Value="model.CurrencyLabel" class="input" placeholder="@T("Canadian Dollars")" />
         </div>
         <div class="form-field">
-            <label>Monthly Amount</label>
+            <label>@T("Monthly Amount")</label>
             <InputNumber @bind-Value="model.MonthlyAmount" class="input" />
         </div>
         <div class="form-field full-width">
-            <label>Wise Payment Link</label>
+            <label>@T("Wise Payment Link")</label>
             <InputText @bind-Value="model.WisePaymentLink" class="input" />
         </div>
         <div class="form-field">
-            <label>Country Code (ISO)</label>
+            <label>@T("Country Code (ISO)")</label>
             <InputText @bind-Value="model.CountryCode" class="input" placeholder="CA, GB, US..." maxlength="2" data-field="country-code" />
         </div>
         <div class="form-field">
-            <label>Tax ID (NIF)</label>
+            <label>@T("Tax ID (NIF)")</label>
             <InputText @bind-Value="model.TaxId" class="input" data-field="tax-id" />
-            <small>The client's tax number in its country (e.g. Business Number, Company Number, VAT, EIN).</small>
+            <small>@T("The client's tax number in its country (e.g. Business Number, Company Number, VAT, EIN).")</small>
         </div>
         <div class="form-field">
-            <label>Reason for no Tax ID</label>
+            <label>@T("Reason for no Tax ID")</label>
             <InputSelect @bind-Value="model.MissingTaxIdReason" class="input" disabled="@(!string.IsNullOrWhiteSpace(model.TaxId))" data-field="missing-tax-id-reason">
                 <option value="">—</option>
                 @foreach (var reason in Enum.GetValues<MissingTaxIdReason>())
@@ -81,14 +81,14 @@
         </div>
         <div class="form-field">
             <label>
-                <InputCheckbox @bind-Value="model.IsActive" /> Active
+                <InputCheckbox @bind-Value="model.IsActive" /> @T("Active")
             </label>
         </div>
     </div>
 
     <div class="actions-row">
-        <button class="btn btn-primary" type="submit">Save</button>
-        <a class="btn btn-secondary" href="/clients">Cancel</a>
+        <button class="btn btn-primary" type="submit">@T("Save")</button>
+        <a class="btn btn-secondary" href="/clients">@T("Cancel")</a>
     </div>
 </EditForm>
 
@@ -96,7 +96,7 @@
     [Parameter] public int Id { get; set; }
 
     private Client model = new();
-    private string Title => Id == 0 ? "New Client" : "Edit Client";
+    private string Title => Id == 0 ? T("New Client") : T("Edit Client");
 
     protected override async Task OnParametersSetAsync()
     {

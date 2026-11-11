@@ -14,6 +14,7 @@ Local invoice management system for a small software services company billing fo
 - PDF export and save to `Empresa/{YYYY-MM}/PDF/`
 - Invoice actions: edit, delete, cancel/reactivate, mark as sent, mark as paid
 - Multiple items per invoice (description, quantity, unit, unit price); subtotal and total are calculated from the items
+- Screens in English or Portuguese (Brazil): switch with EN / PT at the bottom of the menu or in Settings. The invoice PDF and NFS-e documents are not translated. New texts go through `T("...")` and need an entry in `Services/Ui.Portuguese.cs` (a test checks it)
 - NFS-e (nota fiscal de serviço) linked to each invoice: draft created when the invoice is paid, import of the XML files issued on the city hall portal
 
 ## Requirements

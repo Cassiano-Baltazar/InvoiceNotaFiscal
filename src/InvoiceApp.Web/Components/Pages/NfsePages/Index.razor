@@ -7,16 +7,16 @@
 <div class="page-header">
     <h1>NFS-e</h1>
     <div class="actions-row">
-        <a class="btn btn-secondary" href="/nfse/new">New Draft</a>
-        <a class="btn btn-primary" href="/nfse/import">Import XML</a>
+        <a class="btn btn-secondary" href="/nfse/new">@T("New Draft")</a>
+        <a class="btn btn-primary" href="/nfse/import">@T("Import XML")</a>
     </div>
 </div>
 
 <div class="filters narrow-filters">
     <div class="form-field">
-        <label>Status</label>
+        <label>@T("Status")</label>
         <select class="input" @bind="filterStatus" @bind:after="LoadAsync">
-            <option value="">All</option>
+            <option value="">@T("All")</option>
             @foreach (var status in Enum.GetValues<NfseStatus>())
             {
                 <option value="@status">@NfseLabels.Status(status)</option>
@@ -27,25 +27,25 @@
 
 @if (nfses is null)
 {
-    <p>Loading...</p>
+    <p>@T("Loading...")</p>
 }
 else if (nfses.Count == 0)
 {
-    <p>No NFS-e@(string.IsNullOrEmpty(filterStatus) ? "" : " with this status") yet. Import the XML files downloaded from the city hall portal, or mark an invoice as paid to create a draft.</p>
+    <p>@(string.IsNullOrEmpty(filterStatus) ? T("No NFS-e yet.") : T("No NFS-e with this status yet.")) @T("Import the XML files downloaded from the city hall portal, or mark an invoice as paid to create a draft.")</p>
 }
 else
 {
     <table class="data-table">
         <thead>
             <tr>
-                <th>Number</th>
-                <th>Issued</th>
-                <th>Taker</th>
-                <th>Invoice</th>
-                <th>Amount (BRL)</th>
-                <th>Rate</th>
-                <th>Status</th>
-                <th>Source</th>
+                <th>@T("Number")</th>
+                <th>@T("Issued")</th>
+                <th>@T("Taker")</th>
+                <th>@T("Invoice")</th>
+                <th>@T("Amount (BRL)")</th>
+                <th>@T("Rate")</th>
+                <th>@T("Status")</th>
+                <th>@T("Source")</th>
                 <th></th>
             </tr>
         </thead>
@@ -61,13 +61,13 @@ else
                     <td>@(NfseLabels.ExchangeRate(nfse)?.ToString("0.0000") ?? "—")</td>
                     <td><NfseStatusBadge Status="nfse.Status" /></td>
                     <td>@NfseLabels.Source(nfse.Source)</td>
-                    <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? "Edit" : "View")</a></td>
+                    <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? T("Edit") : T("View"))</a></td>
                 </tr>
             }
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4"><strong>Total issued</strong></td>
+                <td colspan="4"><strong>@T("Total issued")</strong></td>
                 <td><strong>@NfseLabels.Brl(nfses.Where(x => x.Status == NfseStatus.Issued).Sum(x => x.AmountBrl))</strong></td>
                 <td colspan="4"></td>
             </tr>

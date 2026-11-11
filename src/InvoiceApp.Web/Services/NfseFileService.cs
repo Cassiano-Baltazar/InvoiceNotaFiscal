@@ -2,6 +2,7 @@ using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
 using InvoiceApp.Web.Models;
 using Microsoft.EntityFrameworkCore;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -17,13 +18,13 @@ public class NfseFileService(AppDbContext db, IPdfExportService pdf, ILogger<Nfs
     {
         var nfse = await db.Nfses.AsNoTracking().Include(x => x.Invoice).FirstOrDefaultAsync(x => x.Id == nfseId, cancellationToken);
         if (nfse is null)
-            return NfseActionResult.Fail("NFS-e not found.");
+            return NfseActionResult.Fail(T("NFS-e not found."));
         if (nfse.Status == NfseStatus.Draft || string.IsNullOrWhiteSpace(nfse.XmlContent))
-            return NfseActionResult.Fail("Only issued notes with their XML can be saved to the folder.", nfseId);
+            return NfseActionResult.Fail(T("Only issued notes with their XML can be saved to the folder."), nfseId);
 
         var company = await db.CompanySettings.AsNoTracking().FirstAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(company.OutputBasePath))
-            return NfseActionResult.Fail("Set the output folder in Settings first.", nfseId);
+            return NfseActionResult.Fail(T("Set the output folder in Settings first."), nfseId);
 
         var folder = Path.Combine(company.OutputBasePath, $"{nfse.Invoice.IssueYear}-{nfse.Invoice.IssueMonth:D2}", "NFSe");
         var baseName = Path.GetFileNameWithoutExtension(
@@ -38,12 +39,12 @@ public class NfseFileService(AppDbContext db, IPdfExportService pdf, ILogger<Nfs
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return NfseActionResult.Fail($"Could not save the XML to {folder}: {ex.Message}", nfseId);
+            return NfseActionResult.Fail(T("Could not save the XML to {0}: {1}", folder, ex.Message), nfseId);
         }
 
         // Notes from the city hall portal use another layout; only the national one has a DANFSe here.
         if (!DanfseHtmlBuilder.IsNationalNfse(nfse.XmlContent))
-            return NfseActionResult.Ok($"XML saved to {xmlPath}.", nfseId);
+            return NfseActionResult.Ok(T("XML saved to {0}.", xmlPath), nfseId);
 
         try
         {
@@ -53,9 +54,9 @@ public class NfseFileService(AppDbContext db, IPdfExportService pdf, ILogger<Nfs
         catch (Exception ex)
         {
             logger.LogWarning(ex, "NFS-e {Id}: could not create the PDF", nfseId);
-            return NfseActionResult.Ok($"XML saved to {xmlPath}.", nfseId, [$"The PDF could not be created: {ex.Message}"]);
+            return NfseActionResult.Ok(T("XML saved to {0}.", xmlPath), nfseId, [T("The PDF could not be created: {0}", ex.Message)]);
         }
 
-        return NfseActionResult.Ok($"XML and PDF saved to {folder}.", nfseId);
+        return NfseActionResult.Ok(T("XML and PDF saved to {0}.", folder), nfseId);
     }
 }

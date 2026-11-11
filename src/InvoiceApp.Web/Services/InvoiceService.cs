@@ -3,6 +3,7 @@ using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
 using InvoiceApp.Web.Models;
 using Microsoft.EntityFrameworkCore;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -94,7 +95,7 @@ public class InvoiceService(
 
         if (clients.Count == 0)
         {
-            result.Errors.Add("No active clients found.");
+            result.Errors.Add(T("No active clients found."));
             return result;
         }
 
@@ -119,7 +120,7 @@ public class InvoiceService(
         {
             if (existingClientIds.Contains(client.Id))
             {
-                result.Errors.Add($"Invoice already exists for {client.Name} in {request.IssueYear}-{request.IssueMonth:D2}.");
+                result.Errors.Add(T("Invoice already exists for {0} in {1}.", client.Name, $"{request.IssueYear}-{request.IssueMonth:D2}"));
                 continue;
             }
 
@@ -182,7 +183,7 @@ public class InvoiceService(
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Failed to export PDF for invoice {InvoiceNumber}", invoice.InvoiceNumber);
-                    result.Errors.Add($"PDF export failed for {invoice.InvoiceNumber}: {ex.Message}");
+                    result.Errors.Add(T("PDF export failed for {0}: {1}", invoice.InvoiceNumber, ex.Message));
                 }
             }
 
@@ -199,10 +200,10 @@ public class InvoiceService(
             .Include(x => x.Items)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (invoice is null)
-            return InvoiceActionResult.Fail("Invoice not found.");
+            return InvoiceActionResult.Fail(T("Invoice not found."));
 
         if (!InvoiceRules.CanEdit(invoice.Status))
-            return InvoiceActionResult.Fail($"A {InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()} invoice cannot be edited.");
+            return InvoiceActionResult.Fail(T("A {0} invoice cannot be edited.", InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()));
 
         var validationError = Validate(model);
         if (validationError is not null)
@@ -242,8 +243,8 @@ public class InvoiceService(
         await db.SaveChangesAsync(cancellationToken);
 
         var message = wasSent
-            ? "Invoice updated. Status changed back to Not Sent."
-            : "Invoice updated.";
+            ? T("Invoice updated. Status changed back to Not Sent.")
+            : T("Invoice updated.");
 
         string? warning = null;
         if (!string.IsNullOrWhiteSpace(invoice.PdfPath))
@@ -255,7 +256,7 @@ public class InvoiceService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to regenerate PDF for invoice {InvoiceNumber}", invoice.InvoiceNumber);
-                warning = $"The saved PDF could not be regenerated: {ex.Message}";
+                warning = T("The saved PDF could not be regenerated: {0}", ex.Message);
             }
         }
 
@@ -266,13 +267,13 @@ public class InvoiceService(
     {
         var invoice = await db.Invoices.FindAsync([id], cancellationToken);
         if (invoice is null)
-            return InvoiceActionResult.Fail("Invoice not found.");
+            return InvoiceActionResult.Fail(T("Invoice not found."));
 
         if (!InvoiceRules.CanDelete(invoice.Status))
-            return InvoiceActionResult.Fail($"A {InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()} invoice cannot be deleted.");
+            return InvoiceActionResult.Fail(T("A {0} invoice cannot be deleted.", InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()));
 
         if (await db.Nfses.AnyAsync(x => x.InvoiceId == id, cancellationToken))
-            return InvoiceActionResult.Fail($"Invoice {invoice.InvoiceNumber} has an NFS-e linked. Delete the NFS-e first.");
+            return InvoiceActionResult.Fail(T("Invoice {0} has an NFS-e linked. Delete the NFS-e first.", invoice.InvoiceNumber));
 
         string? warning = null;
         if (!string.IsNullOrWhiteSpace(invoice.PdfPath) && File.Exists(invoice.PdfPath))
@@ -284,27 +285,31 @@ public class InvoiceService(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Could not delete PDF {Path}", invoice.PdfPath);
-                warning = $"The PDF file could not be deleted: {invoice.PdfPath}";
+                warning = T("The PDF file could not be deleted: {0}", invoice.PdfPath);
             }
         }
 
         db.Invoices.Remove(invoice);
         await db.SaveChangesAsync(cancellationToken);
-        return InvoiceActionResult.Ok($"Invoice {invoice.InvoiceNumber} deleted.", warning);
+        return InvoiceActionResult.Ok(T("Invoice {0} deleted.", invoice.InvoiceNumber), warning);
     }
 
     public Task<InvoiceActionResult> CancelAsync(int id, CancellationToken cancellationToken = default) =>
-        ChangeStatusAsync(id, InvoiceRules.CanCancel, InvoiceStatus.Cancelled, "cancelled", cancellationToken);
+        ChangeStatusAsync(id, InvoiceRules.CanCancel, InvoiceStatus.Cancelled,
+            "Invoice {0} cancelled.", "A {0} invoice cannot be cancelled.", cancellationToken);
 
     public Task<InvoiceActionResult> ReactivateAsync(int id, CancellationToken cancellationToken = default) =>
-        ChangeStatusAsync(id, InvoiceRules.CanReactivate, InvoiceStatus.Generated, "reactivated", cancellationToken);
+        ChangeStatusAsync(id, InvoiceRules.CanReactivate, InvoiceStatus.Generated,
+            "Invoice {0} reactivated.", "A {0} invoice cannot be reactivated.", cancellationToken);
 
     public Task<InvoiceActionResult> MarkAsSentAsync(int id, CancellationToken cancellationToken = default) =>
-        ChangeStatusAsync(id, InvoiceRules.CanMarkAsSent, InvoiceStatus.Sent, "marked as sent", cancellationToken);
+        ChangeStatusAsync(id, InvoiceRules.CanMarkAsSent, InvoiceStatus.Sent,
+            "Invoice {0} marked as sent.", "A {0} invoice cannot be marked as sent.", cancellationToken);
 
     public async Task<InvoiceActionResult> MarkAsPaidAsync(int id, CancellationToken cancellationToken = default)
     {
-        var result = await ChangeStatusAsync(id, InvoiceRules.CanMarkAsPaid, InvoiceStatus.Paid, "marked as paid", cancellationToken);
+        var result = await ChangeStatusAsync(id, InvoiceRules.CanMarkAsPaid, InvoiceStatus.Paid,
+            "Invoice {0} marked as paid.", "A {0} invoice cannot be marked as paid.", cancellationToken);
         if (!result.Success)
             return result;
 
@@ -312,54 +317,55 @@ public class InvoiceService(
         var nfse = await nfseService.CreateDraftForInvoiceAsync(id, cancellationToken);
         return nfse.Success
             ? InvoiceActionResult.Ok($"{result.Message} {nfse.Message}")
-            : InvoiceActionResult.Ok(result.Message, $"The NFS-e draft could not be created: {nfse.Message}");
+            : InvoiceActionResult.Ok(result.Message, T("The NFS-e draft could not be created: {0}", nfse.Message));
     }
 
     private async Task<InvoiceActionResult> ChangeStatusAsync(
         int id,
         Func<InvoiceStatus, bool> isAllowed,
         InvoiceStatus newStatus,
-        string actionLabel,
+        string doneMessage,
+        string notAllowedMessage,
         CancellationToken cancellationToken)
     {
         var invoice = await db.Invoices.FindAsync([id], cancellationToken);
         if (invoice is null)
-            return InvoiceActionResult.Fail("Invoice not found.");
+            return InvoiceActionResult.Fail(T("Invoice not found."));
 
         if (!isAllowed(invoice.Status))
             return InvoiceActionResult.Fail(
-                $"A {InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()} invoice cannot be {actionLabel}.");
+                T(notAllowedMessage, InvoiceRules.GetLabel(invoice.Status).ToLowerInvariant()));
 
         invoice.Status = newStatus;
         await db.SaveChangesAsync(cancellationToken);
-        return InvoiceActionResult.Ok($"Invoice {invoice.InvoiceNumber} {actionLabel}.");
+        return InvoiceActionResult.Ok(T(doneMessage, invoice.InvoiceNumber));
     }
 
     private static string? Validate(InvoiceEditModel model)
     {
         if (model.DueDate < model.InvoiceDate)
-            return "Due date cannot be before the invoice date.";
+            return T("Due date cannot be before the invoice date.");
         if (model.Items.Count == 0)
-            return "The invoice must have at least one item.";
+            return T("The invoice must have at least one item.");
         if (model.Items.Any(x => string.IsNullOrWhiteSpace(x.Description)))
-            return "Item description is required.";
+            return T("Item description is required.");
         if (model.Items.Any(x => x.Quantity <= 0))
-            return "Item quantity must be greater than zero.";
+            return T("Item quantity must be greater than zero.");
         if (model.Items.Any(x => x.UnitPrice < 0))
-            return "Item unit price cannot be negative.";
+            return T("Item unit price cannot be negative.");
         if (model.Subtotal <= 0)
-            return "Subtotal must be greater than zero.";
+            return T("Subtotal must be greater than zero.");
         if (model.Tax < 0)
-            return "Tax cannot be negative.";
+            return T("Tax cannot be negative.");
         if (string.IsNullOrWhiteSpace(model.Currency))
-            return "Currency is required.";
+            return T("Currency is required.");
         return null;
     }
 
     public async Task<byte[]> ExportPdfAsync(int id, CancellationToken cancellationToken = default)
     {
         var model = await GetReportModelAsync(id, cancellationToken)
-            ?? throw new InvalidOperationException("Invoice not found.");
+            ?? throw new InvalidOperationException(T("Invoice not found."));
 
         return await pdfExportService.GeneratePdfAsync(model, cancellationToken);
     }
@@ -367,7 +373,7 @@ public class InvoiceService(
     public async Task<string?> SavePdfToDiskAsync(int id, CancellationToken cancellationToken = default)
     {
         var model = await GetReportModelAsync(id, cancellationToken)
-            ?? throw new InvalidOperationException("Invoice not found.");
+            ?? throw new InvalidOperationException(T("Invoice not found."));
 
         var company = model.Company;
         var invoice = model.Invoice;

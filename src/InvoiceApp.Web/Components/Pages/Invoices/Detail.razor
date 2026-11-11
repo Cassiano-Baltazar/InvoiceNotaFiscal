@@ -4,16 +4,16 @@
 @inject INfseService NfseService
 @inject NavigationManager Navigation
 
-<PageTitle>Invoice Details</PageTitle>
+<PageTitle>@T("Invoice Details")</PageTitle>
 
 @if (notFound)
 {
-    <p>Invoice not found.</p>
-    <a class="btn btn-secondary" href="/invoices">Back to Invoices</a>
+    <p>@T("Invoice not found.")</p>
+    <a class="btn btn-secondary" href="/invoices">@T("Back to Invoices")</a>
 }
 else if (report is null)
 {
-    <p>Loading...</p>
+    <p>@T("Loading...")</p>
 }
 else
 {
@@ -23,8 +23,8 @@ else
             <p>@report.Invoice.ClientName · <StatusBadge Status="report.Invoice.Status" /></p>
         </div>
         <div class="actions-row">
-            <a class="btn btn-primary" href="/api/invoices/@Id/pdf" target="_blank">Export PDF</a>
-            <button class="btn btn-secondary" @onclick="SavePdfAsync">Save PDF to Folder</button>
+            <a class="btn btn-primary" href="/api/invoices/@Id/pdf" target="_blank">@T("Export PDF")</a>
+            <button class="btn btn-secondary" @onclick="SavePdfAsync">@T("Save PDF to Folder")</button>
         </div>
     </div>
 
@@ -48,21 +48,21 @@ else
                 <div class="actions-row">
                     @if (!nfses.Any(n => n.Status is NfseStatus.Draft or NfseStatus.Issued))
                     {
-                        <button class="btn btn-secondary" data-action="create-nfse" @onclick="CreateNfseAsync">Create NFS-e Draft</button>
+                        <button class="btn btn-secondary" data-action="create-nfse" @onclick="CreateNfseAsync">@T("Create NFS-e Draft")</button>
                     }
-                    <a class="btn btn-secondary" href="/nfse/import?invoiceId=@Id" data-action="import-nfse">Import XML</a>
+                    <a class="btn btn-secondary" href="/nfse/import?invoiceId=@Id" data-action="import-nfse">@T("Import XML")</a>
                 </div>
             }
         </div>
         @if (nfses.Count == 0)
         {
-            <p class="hint">No NFS-e linked to this invoice yet.@(report.Invoice.Status == InvoiceStatus.Paid ? "" : " A draft is created automatically when the invoice is marked as paid.")</p>
+            <p class="hint">@T("No NFS-e linked to this invoice yet.")@(report.Invoice.Status == InvoiceStatus.Paid ? "" : " " + T("A draft is created automatically when the invoice is marked as paid."))</p>
         }
         else
         {
             <table class="data-table">
                 <thead>
-                    <tr><th>Number</th><th>Issued</th><th>Amount (BRL)</th><th>Rate</th><th>Status</th><th></th></tr>
+                    <tr><th>@T("Number")</th><th>@T("Issued")</th><th>@T("Amount (BRL)")</th><th>@T("Rate")</th><th>@T("Status")</th><th></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var nfse in nfses)
@@ -73,7 +73,7 @@ else
                             <td>@NfseLabels.Brl(nfse.AmountBrl)</td>
                             <td>@(nfse.AmountBrl > 0 && report.Invoice.Total > 0 ? (nfse.AmountBrl / report.Invoice.Total).ToString("0.0000") : "—")</td>
                             <td><NfseStatusBadge Status="nfse.Status" /></td>
-                            <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? "Edit" : "View")</a></td>
+                            <td><a class="btn btn-secondary" href="/nfse/@nfse.Id">@(nfse.Status == NfseStatus.Draft ? T("Edit") : T("View"))</a></td>
                         </tr>
                     }
                 </tbody>
@@ -83,7 +83,7 @@ else
 
     @if (!string.IsNullOrWhiteSpace(report.Invoice.PdfPath))
     {
-        <p class="hint">Saved at: @report.Invoice.PdfPath</p>
+        <p class="hint">@T("Saved at: {0}", report.Invoice.PdfPath)</p>
     }
 
     <InvoiceReportView Model="report" />
@@ -116,13 +116,13 @@ else
         {
             var path = await InvoiceService.SavePdfToDiskAsync(Id);
             isError = false;
-            message = $"PDF saved to {path}";
+            message = T("PDF saved to {0}", path);
             report = await InvoiceService.GetReportModelAsync(Id);
         }
         catch (Exception ex)
         {
             isError = true;
-            message = $"Failed to save PDF: {ex.Message}";
+            message = T("Failed to save PDF: {0}", ex.Message);
         }
     }
 

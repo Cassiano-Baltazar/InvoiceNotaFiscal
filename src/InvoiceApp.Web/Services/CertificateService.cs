@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -46,13 +47,13 @@ public class CertificateService(AppDbContext db, ISecretProtector protector) : I
     public async Task<CertificateInfo> SaveAsync(byte[] pfxData, string fileName, string password, CancellationToken cancellationToken = default)
     {
         if (pfxData.Length == 0)
-            throw new InvalidOperationException("The certificate file is empty.");
+            throw new InvalidOperationException(T("The certificate file is empty."));
         if (pfxData.Length > MaxFileSize)
-            throw new InvalidOperationException("The certificate file is too large. Select the .pfx (or .p12) file of an A1 certificate.");
+            throw new InvalidOperationException(T("The certificate file is too large. Select the .pfx (or .p12) file of an A1 certificate."));
 
         using var certificate = Open(pfxData, password, X509KeyStorageFlags.EphemeralKeySet);
         if (!certificate.HasPrivateKey)
-            throw new InvalidOperationException("The file does not contain the private key. Export the certificate as .pfx including the private key.");
+            throw new InvalidOperationException(T("The file does not contain the private key. Export the certificate as .pfx including the private key."));
 
         var stored = await db.DigitalCertificates.FirstOrDefaultAsync(cancellationToken);
         if (stored is null)
@@ -82,7 +83,7 @@ public class CertificateService(AppDbContext db, ISecretProtector protector) : I
             return null;
 
         var password = protector.Unprotect(stored.ProtectedPassword)
-            ?? throw new InvalidOperationException(PasswordUnreadableMessage);
+            ?? throw new InvalidOperationException(T(PasswordUnreadableMessage));
         return Open(stored.PfxData, password, X509KeyStorageFlags.Exportable);
     }
 
@@ -112,7 +113,7 @@ public class CertificateService(AppDbContext db, ISecretProtector protector) : I
         }
         catch (CryptographicException)
         {
-            throw new InvalidOperationException("Could not open the certificate. Check the password and that the file is a .pfx (or .p12).");
+            throw new InvalidOperationException(T("Could not open the certificate. Check the password and that the file is a .pfx (or .p12)."));
         }
     }
 }
