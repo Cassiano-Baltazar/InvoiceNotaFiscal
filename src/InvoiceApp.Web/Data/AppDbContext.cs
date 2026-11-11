@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<Nfse> Nfses => Set<Nfse>();
     public DbSet<DigitalCertificate> DigitalCertificates => Set<DigitalCertificate>();
+    public DbSet<MonthlyTaxRecord> MonthlyTaxRecords => Set<MonthlyTaxRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +26,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.DefaultNationalTaxCode).HasMaxLength(6);
             entity.Property(x => x.MunicipalRegistration).HasMaxLength(15);
             entity.Property(x => x.SimplesNacionalTaxRate).HasPrecision(5, 2);
+            entity.Property(x => x.AccountantMonthlyFee).HasPrecision(18, 2);
+            entity.Property(x => x.ProLaboreRate).HasPrecision(5, 2);
+        });
+
+        modelBuilder.Entity<MonthlyTaxRecord>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Year, x.Month }).IsUnique();
+            entity.Property(x => x.OtherRevenueBrl).HasPrecision(18, 2);
+            entity.Property(x => x.DasGuideAmount).HasPrecision(18, 2);
         });
 
         modelBuilder.Entity<DigitalCertificate>(entity =>

@@ -119,6 +119,26 @@ else
             </div>
         </div>
 
+        <h2>Monthly Withdrawal</h2>
+        <p class="hint">Used by the Monthly Withdrawal screen to work out how much of the month's revenue you can take out
+            after the DAS, the pró-labore taxes (INSS and IRRF) and the accountant.</p>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Company Start Date</label>
+                <InputDate @bind-Value="model.CompanyStartDate" class="input" data-field="company-start-date" />
+                <small>While the company has less than 12 months, the DAS rate uses the average revenue since this date.</small>
+            </div>
+            <div class="form-field">
+                <label>Pró-labore (% of revenue)</label>
+                <InputNumber @bind-Value="model.ProLaboreRate" class="input" step="0.01" data-field="pro-labore-rate" />
+                <small>28% keeps the company in Anexo III (Fator R).</small>
+            </div>
+            <div class="form-field">
+                <label>Accountant Monthly Fee (R$)</label>
+                <InputNumber @bind-Value="model.AccountantMonthlyFee" class="input" step="0.01" data-field="accountant-fee" />
+            </div>
+        </div>
+
         @if (!string.IsNullOrWhiteSpace(message))
         {
             <p class="message">@message</p>

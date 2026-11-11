@@ -29,6 +29,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddScoped<INfseFileService, NfseFileService>();
         Services.AddScoped<INfseService, NfseService>();
         Services.AddScoped<IInvoiceService, InvoiceService>();
+        Services.AddScoped<IWithdrawalService, WithdrawalService>();
         Services.AddSingleton<IPdfExportService>(Pdf);
         Services.AddLogging();
         JSInterop.Mode = JSRuntimeMode.Strict;
