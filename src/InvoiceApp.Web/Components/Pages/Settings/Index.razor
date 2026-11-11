@@ -1,25 +1,36 @@
 @page "/settings"
 @rendermode InteractiveServer
 @inject ICompanySettingsService SettingsService
+@inject NavigationManager Navigation
 
-<PageTitle>Settings</PageTitle>
+<PageTitle>@T("Settings")</PageTitle>
 
-<h1>Company Settings</h1>
+<h1>@T("Company Settings")</h1>
 
 @if (model is null)
 {
-    <p>Loading...</p>
+    <p>@T("Loading...")</p>
 }
 else
 {
     <EditForm Model="model" OnValidSubmit="SaveAsync">
         <div class="form-grid">
             <div class="form-field">
-                <label>Legal Name</label>
+                <label>@T("Language")</label>
+                <InputSelect @bind-Value="model.Language" class="input" data-field="language">
+                    @foreach (var language in Ui.Languages)
+                    {
+                        <option value="@language.Code">@language.Name</option>
+                    }
+                </InputSelect>
+                <small>@T("Language of the app screens. Invoices and NFS-e documents are not changed.")</small>
+            </div>
+            <div class="form-field">
+                <label>@T("Legal Name")</label>
                 <InputText @bind-Value="model.LegalName" class="input" />
             </div>
             <div class="form-field">
-                <label>Trade Name</label>
+                <label>@T("Trade Name")</label>
                 <InputText @bind-Value="model.TradeName" class="input" />
             </div>
             <div class="form-field">
@@ -27,62 +38,62 @@ else
                 <InputText @bind-Value="model.Cnpj" class="input" />
             </div>
             <div class="form-field">
-                <label>Address Line 1</label>
+                <label>@T("Address Line 1")</label>
                 <InputText @bind-Value="model.AddressLine1" class="input" />
             </div>
             <div class="form-field">
-                <label>Address Line 2</label>
+                <label>@T("Address Line 2")</label>
                 <InputText @bind-Value="model.AddressLine2" class="input" />
             </div>
             <div class="form-field">
-                <label>City</label>
+                <label>@T("City")</label>
                 <InputText @bind-Value="model.City" class="input" />
             </div>
             <div class="form-field">
-                <label>State</label>
+                <label>@T("State")</label>
                 <InputText @bind-Value="model.State" class="input" />
             </div>
             <div class="form-field">
-                <label>Postal Code</label>
+                <label>@T("Postal Code")</label>
                 <InputText @bind-Value="model.PostalCode" class="input" />
             </div>
             <div class="form-field">
-                <label>Country</label>
+                <label>@T("Country")</label>
                 <InputText @bind-Value="model.Country" class="input" />
             </div>
             <div class="form-field">
-                <label>Phone</label>
+                <label>@T("Phone")</label>
                 <InputText @bind-Value="model.Phone" class="input" />
             </div>
             <div class="form-field">
-                <label>Email</label>
+                <label>@T("Email")</label>
                 <InputText @bind-Value="model.Email" class="input" />
             </div>
             <div class="form-field full-width">
-                <label>Output Base Path</label>
+                <label>@T("Output Base Path")</label>
                 <InputText @bind-Value="model.OutputBasePath" class="input" />
             </div>
             <div class="form-field">
-                <label>Issue Day</label>
+                <label>@T("Issue Day")</label>
                 <InputNumber @bind-Value="model.IssueDay" class="input" min="1" max="28" />
             </div>
             <div class="form-field">
-                <label>Payment Terms (days)</label>
+                <label>@T("Payment Terms (days)")</label>
                 <InputNumber @bind-Value="model.PaymentTermsDays" class="input" min="1" max="90" />
             </div>
             <div class="form-field full-width">
-                <label>Service Description Template</label>
+                <label>@T("Service Description Template")</label>
                 <InputText @bind-Value="model.ServiceDescriptionTemplate" class="input" />
-                <small>Use {serviceMonth} placeholder, e.g. August 2026</small>
+                <small>@T("Use {serviceMonth} placeholder, e.g. August 2026")</small>
             </div>
         </div>
 
         <h2>NFS-e (Emissor Nacional)</h2>
-        <p class="hint">Used to issue NFS-e through the national API. The company must be Simples Nacional ME/EPP.
-            Start in restricted production (test notes, no fiscal value) and switch to production when a test note is accepted.</p>
+        <p class="hint">@T("Used to issue NFS-e through the national API. The company must be Simples Nacional ME/EPP.")
+            @T("Start in restricted production (test notes, no fiscal value) and switch to production when a test note is accepted.")</p>
         <div class="form-grid">
             <div class="form-field">
-                <label>Environment</label>
+                <label>@T("Environment")</label>
                 <InputSelect @bind-Value="model.NfseEnvironment" class="input" data-field="nfse-environment">
                     @foreach (var environment in Enum.GetValues<NfseEnvironment>())
                     {
@@ -91,50 +102,49 @@ else
                 </InputSelect>
             </div>
             <div class="form-field">
-                <label>Municipality Code (IBGE)</label>
+                <label>@T("Municipality Code (IBGE)")</label>
                 <InputText @bind-Value="model.MunicipalityCode" class="input" placeholder="4309308" maxlength="7" data-field="municipality-code" />
-                <small>7 digits. Guaíba/RS is 4309308.</small>
+                <small>@T("7 digits. Guaíba/RS is 4309308.")</small>
             </div>
             <div class="form-field">
-                <label>Municipal Registration (IM)</label>
+                <label>@T("Municipal Registration (IM)")</label>
                 <InputText @bind-Value="model.MunicipalRegistration" class="input" maxlength="15" data-field="municipal-registration" />
             </div>
             <div class="form-field">
-                <label>DPS Series</label>
+                <label>@T("DPS Series")</label>
                 <InputText @bind-Value="model.DpsSeries" class="input" maxlength="5" data-field="dps-series" />
             </div>
             <div class="form-field">
-                <label>Next DPS Number</label>
+                <label>@T("Next DPS Number")</label>
                 <InputNumber @bind-Value="model.NextDpsNumber" class="input" min="1" data-field="next-dps-number" />
             </div>
             <div class="form-field">
-                <label>Default National Tax Code</label>
+                <label>@T("Default National Tax Code")</label>
                 <InputText @bind-Value="model.DefaultNationalTaxCode" class="input" maxlength="6" data-field="national-tax-code" />
-                <small>cTribNac, 6 digits. 010101 is software development (item 1.01).</small>
+                <small>@T("cTribNac, 6 digits. 010101 is software development (item 1.01).")</small>
             </div>
             <div class="form-field">
-                <label>Approximate Simples Nacional Tax Rate (%)</label>
+                <label>@T("Approximate Simples Nacional Tax Rate (%)")</label>
                 <InputNumber @bind-Value="model.SimplesNacionalTaxRate" class="input" step="0.01" data-field="simples-rate" />
-                <small>Shown on the note as the approximate total of taxes (pTotTribSN). Ask your accountant.</small>
+                <small>@T("Shown on the note as the approximate total of taxes (pTotTribSN). Ask your accountant.")</small>
             </div>
         </div>
 
-        <h2>Monthly Withdrawal</h2>
-        <p class="hint">Used by the Monthly Withdrawal screen to work out how much of the month's revenue you can take out
-            after the DAS, the pró-labore taxes (INSS and IRRF) and the accountant.</p>
+        <h2>@T("Monthly Withdrawal")</h2>
+        <p class="hint">@T("Used by the Monthly Withdrawal screen to work out how much of the month's revenue you can take out after the DAS, the pró-labore taxes (INSS and IRRF) and the accountant.")</p>
         <div class="form-grid">
             <div class="form-field">
-                <label>Company Start Date</label>
+                <label>@T("Company Start Date")</label>
                 <InputDate @bind-Value="model.CompanyStartDate" class="input" data-field="company-start-date" />
-                <small>While the company has less than 12 months, the DAS rate uses the average revenue since this date.</small>
+                <small>@T("While the company has less than 12 months, the DAS rate uses the average revenue since this date.")</small>
             </div>
             <div class="form-field">
-                <label>Pró-labore (% of revenue)</label>
+                <label>@T("Pró-labore (% of revenue)")</label>
                 <InputNumber @bind-Value="model.ProLaboreRate" class="input" step="0.01" data-field="pro-labore-rate" />
-                <small>28% keeps the company in Anexo III (Fator R).</small>
+                <small>@T("28% keeps the company in Anexo III (Fator R).")</small>
             </div>
             <div class="form-field">
-                <label>Accountant Monthly Fee (R$)</label>
+                <label>@T("Accountant Monthly Fee (R$)")</label>
                 <InputNumber @bind-Value="model.AccountantMonthlyFee" class="input" step="0.01" data-field="accountant-fee" />
             </div>
         </div>
@@ -145,7 +155,7 @@ else
         }
 
         <div class="actions-row">
-            <button class="btn btn-primary" type="submit">Save Settings</button>
+            <button class="btn btn-primary" type="submit">@T("Save Settings")</button>
         </div>
     </EditForm>
 
@@ -166,7 +176,16 @@ else
         if (model is null)
             return;
 
+        model.Language = Normalize(model.Language);
         await SettingsService.SaveAsync(model);
-        message = "Settings saved.";
+        if (model.Language != Ui.Language)
+        {
+            // Reload the whole app so every screen, the menu included, shows the new language.
+            Ui.Language = model.Language;
+            Navigation.NavigateTo("/settings", forceLoad: true);
+            return;
+        }
+
+        message = T("Settings saved.");
     }
 }

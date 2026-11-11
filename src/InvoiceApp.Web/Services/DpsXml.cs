@@ -6,6 +6,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
 using InvoiceApp.Web.Data.Entities;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -56,31 +57,31 @@ public static partial class DpsXml
     {
         var problems = new List<string>();
         if (Digits(company.Cnpj).Length != 14)
-            problems.Add("Settings: the company CNPJ must have 14 digits.");
+            problems.Add(T("Settings: the company CNPJ must have 14 digits."));
         if (!Regex.IsMatch(company.MunicipalityCode ?? "", @"^\d{7}$"))
-            problems.Add("Settings: the municipality code (IBGE) must have 7 digits, e.g. 4309308 for Guaíba.");
+            problems.Add(T("Settings: the municipality code (IBGE) must have 7 digits, e.g. 4309308 for Guaíba."));
         if (!Regex.IsMatch(company.DpsSeries ?? "", @"^(?:[0-9]{1,4}|[0-8][0-9]{4})$"))
-            problems.Add("Settings: the DPS series must be a number from 0 to 89999.");
+            problems.Add(T("Settings: the DPS series must be a number from 0 to 89999."));
         if (company.SimplesNacionalTaxRate is <= 0 or >= 100)
-            problems.Add("Settings: fill in the approximate Simples Nacional tax rate (%).");
+            problems.Add(T("Settings: fill in the approximate Simples Nacional tax rate (%)."));
 
         if (nfse.AmountBrl <= 0)
-            problems.Add("Amount (BRL) must be greater than zero.");
+            problems.Add(T("Amount (BRL) must be greater than zero."));
         if (nfse.AmountForeign <= 0)
-            problems.Add("Amount in the foreign currency must be greater than zero.");
+            problems.Add(T("Amount in the foreign currency must be greater than zero."));
         if (string.IsNullOrWhiteSpace(nfse.CurrencyCode) || !BacenCurrencyCodes.ContainsKey(nfse.CurrencyCode))
-            problems.Add($"Currency '{nfse.CurrencyCode}' is not supported. Use one of: {string.Join(", ", BacenCurrencyCodes.Keys)}.");
+            problems.Add(T("Currency '{0}' is not supported. Use one of: {1}.", nfse.CurrencyCode, string.Join(", ", BacenCurrencyCodes.Keys)));
         if (!IsCountryCode(nfse.TakerCountryCode))
-            problems.Add("Taker country code (ISO, 2 letters) is required.");
+            problems.Add(T("Taker country code (ISO, 2 letters) is required."));
         // The national system refuses reason 0 (not informed) with E0226.
         if (string.IsNullOrWhiteSpace(nfse.TakerTaxId) && nfse.TakerMissingTaxIdReason is null or MissingTaxIdReason.NotInformed)
-            problems.Add("Fill in the taker tax id (NIF), or choose why it has none (exempt or not required).");
+            problems.Add(T("Fill in the taker tax id (NIF), or choose why it has none (exempt or not required)."));
         if (!Regex.IsMatch(nfse.NationalTaxCode ?? "", @"^\d{6}$"))
-            problems.Add("National tax code must have 6 digits, e.g. 010101.");
+            problems.Add(T("National tax code must have 6 digits, e.g. 010101."));
         if (!string.IsNullOrWhiteSpace(nfse.NbsCode) && !Regex.IsMatch(nfse.NbsCode, @"^\d{9}$"))
-            problems.Add("NBS code must have 9 digits.");
+            problems.Add(T("NBS code must have 9 digits."));
         if (nfse.IrAmount + nfse.InssAmount + nfse.CsllAmount + nfse.PisAmount + nfse.CofinsAmount + nfse.IssWithheldAmount > 0)
-            problems.Add("Withheld taxes are not supported when issuing an exported service. Set them to zero.");
+            problems.Add(T("Withheld taxes are not supported when issuing an exported service. Set them to zero."));
         return problems;
     }
 

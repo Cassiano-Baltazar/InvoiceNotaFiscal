@@ -1,5 +1,6 @@
 using System.Globalization;
 using InvoiceApp.Web.Data.Entities;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -9,25 +10,25 @@ public static class NfseLabels
 
     public static string Status(NfseStatus status) => status switch
     {
-        NfseStatus.Draft => "Draft",
-        NfseStatus.Issued => "Issued",
-        NfseStatus.Replaced => "Replaced",
-        NfseStatus.Cancelled => "Cancelled",
+        NfseStatus.Draft => T("Draft"),
+        NfseStatus.Issued => T("Issued"),
+        NfseStatus.Replaced => T("Replaced"),
+        NfseStatus.Cancelled => T("Cancelled"),
         _ => status.ToString()
     };
 
     public static string Source(NfseSource source) => source switch
     {
-        NfseSource.Manual => "Manual",
-        NfseSource.Imported => "Imported",
+        NfseSource.Manual => T("Manual"),
+        NfseSource.Imported => T("Imported"),
         NfseSource.NationalApi => "Emissor Nacional",
         _ => source.ToString()
     };
 
     public static string Environment(NfseEnvironment environment) => environment switch
     {
-        NfseEnvironment.Production => "Production",
-        NfseEnvironment.RestrictedProduction => "Restricted production (tests, no fiscal value)",
+        NfseEnvironment.Production => T("Production"),
+        NfseEnvironment.RestrictedProduction => T("Restricted production (tests, no fiscal value)"),
         _ => environment.ToString()
     };
 
@@ -45,19 +46,19 @@ public static class NfseLabels
 
     public static string TaxIdReasonLabel(MissingTaxIdReason reason) => reason switch
     {
-        MissingTaxIdReason.NotInformed => "Not informed",
-        MissingTaxIdReason.Exempt => "Exempt from tax id",
-        MissingTaxIdReason.NotRequired => "Tax id not required",
+        MissingTaxIdReason.NotInformed => T("Not informed"),
+        MissingTaxIdReason.Exempt => T("Exempt from tax id"),
+        MissingTaxIdReason.NotRequired => T("Tax id not required"),
         _ => reason.ToString()
     };
 
     public static string ServiceModeLabel(ForeignServiceMode mode) => mode switch
     {
-        ForeignServiceMode.Unknown => "Unknown",
-        ForeignServiceMode.CrossBorder => "Cross-border (provided from Brazil)",
-        ForeignServiceMode.ConsumptionInBrazil => "Consumed in Brazil",
-        ForeignServiceMode.CommercialPresenceAbroad => "Commercial presence abroad",
-        ForeignServiceMode.TemporaryPresenceOfPersons => "Temporary presence of persons",
+        ForeignServiceMode.Unknown => T("Unknown"),
+        ForeignServiceMode.CrossBorder => T("Cross-border (provided from Brazil)"),
+        ForeignServiceMode.ConsumptionInBrazil => T("Consumed in Brazil"),
+        ForeignServiceMode.CommercialPresenceAbroad => T("Commercial presence abroad"),
+        ForeignServiceMode.TemporaryPresenceOfPersons => T("Temporary presence of persons"),
         _ => mode.ToString()
     };
 }

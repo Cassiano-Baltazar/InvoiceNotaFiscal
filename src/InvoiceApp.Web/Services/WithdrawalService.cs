@@ -1,6 +1,7 @@
 using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -106,13 +107,13 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
 
         var warnings = new List<string>();
         if (settings.ProLaboreRate < 28m)
-            warnings.Add("The pró-labore is below 28% of the revenue: with Fator R under 28% the company moves to Anexo V and the DAS is much higher.");
+            warnings.Add(T("The pró-labore is below 28% of the revenue: with Fator R under 28% the company moves to Anexo V and the DAS is much higher."));
         if (settings.CompanyStartDate is null)
-            warnings.Add("Set the company start date in Settings so the revenue of the last 12 months (RBT12) is right.");
+            warnings.Add(T("Set the company start date in Settings so the revenue of the last 12 months (RBT12) is right."));
         if (settings.AccountantMonthlyFee <= 0)
-            warnings.Add("The accountant's monthly fee is not set in Settings.");
+            warnings.Add(T("The accountant's monthly fee is not set in Settings."));
         if (rbt12 > WithdrawalCalculator.AnexoIII[^1].UpTo)
-            warnings.Add("The revenue of the last 12 months is above the Simples Nacional limit (R$ 4,8 million).");
+            warnings.Add(T("The revenue of the last 12 months is above the Simples Nacional limit (R$ 4,8 million)."));
 
         var result = new MonthlyWithdrawal
         {
@@ -136,10 +137,10 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
         };
 
         if (result.Profit < 0)
-            warnings.Add("The revenue does not cover the DAS, the accountant and the pró-labore this month: there is no profit to distribute.");
+            warnings.Add(T("The revenue does not cover the DAS, the accountant and the pró-labore this month: there is no profit to distribute."));
         // Lei 15.270/2025: profits above R$ 50 mil a month from the same company have 10% withheld.
         if (result.Profit > 50_000m)
-            warnings.Add("Profits above R$ 50.000 in a month have 10% of income tax withheld (Lei 15.270/2025). Talk to the accountant.");
+            warnings.Add(T("Profits above R$ 50.000 in a month have 10% of income tax withheld (Lei 15.270/2025). Talk to the accountant."));
 
         return result;
     }

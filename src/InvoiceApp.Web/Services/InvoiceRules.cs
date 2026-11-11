@@ -1,4 +1,5 @@
 using InvoiceApp.Web.Data.Entities;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -31,10 +32,10 @@ public static class InvoiceRules
 
     public static string GetLabel(InvoiceStatus status) => status switch
     {
-        InvoiceStatus.Generated => "Not Sent",
-        InvoiceStatus.Sent => "Sent",
-        InvoiceStatus.Paid => "Paid",
-        InvoiceStatus.Cancelled => "Cancelled",
+        InvoiceStatus.Generated => T("Not Sent"),
+        InvoiceStatus.Sent => T("Sent"),
+        InvoiceStatus.Paid => T("Paid"),
+        InvoiceStatus.Cancelled => T("Cancelled"),
         _ => status.ToString()
     };
 }

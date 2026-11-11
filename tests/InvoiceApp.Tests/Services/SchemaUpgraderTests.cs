@@ -279,6 +279,7 @@ public class SchemaUpgraderTests : IDisposable
 
     private void DropMonthlyWithdrawal()
     {
+        DropLanguage();
         Execute("DROP TABLE \"MonthlyTaxRecords\";");
         foreach (var column in new[] { "CompanyStartDate", "AccountantMonthlyFee", "ProLaboreRate" })
             Execute($"ALTER TABLE \"CompanySettings\" DROP COLUMN \"{column}\";");
@@ -305,6 +306,29 @@ public class SchemaUpgraderTests : IDisposable
         Assert.Equal(28m, company.ProLaboreRate);
         Assert.Equal(0m, company.AccountantMonthlyFee);
         Assert.Null(company.CompanyStartDate);
+    }
+
+    // ---------- Language ----------
+
+    private void DropLanguage() =>
+        Execute("ALTER TABLE \"CompanySettings\" DROP COLUMN \"Language\";");
+
+    [Fact]
+    public async Task Adds_language_column_matching_the_model()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        DropLanguage();
+
+        using (var db = database.CreateContext())
+        {
+            await SchemaUpgrader.UpgradeAsync(db);
+            await SchemaUpgrader.UpgradeAsync(db);
+        }
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "CompanySettings"), Columns(database.Connection, "CompanySettings"));
+        using var check = database.CreateContext();
+        Assert.Equal("en", (await check.CompanySettings.SingleAsync()).Language);
     }
 
     private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)

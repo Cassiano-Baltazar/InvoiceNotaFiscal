@@ -3,18 +3,18 @@
 @inject IInvoiceService InvoiceService
 @inject IClientService ClientService
 
-<PageTitle>Invoices</PageTitle>
+<PageTitle>@T("Invoices")</PageTitle>
 
 <div class="page-header">
-    <h1>Invoices</h1>
-    <a class="btn btn-primary" href="/invoices/generate">Generate Month</a>
+    <h1>@T("Invoices")</h1>
+    <a class="btn btn-primary" href="/invoices/generate">@T("Generate Month")</a>
 </div>
 
 <div class="filters">
     <div class="form-field">
-        <label>Client</label>
+        <label>@T("Client")</label>
         <select class="input" @bind="filterClientId">
-            <option value="">All</option>
+            <option value="">@T("All")</option>
             @foreach (var client in clients)
             {
                 <option value="@client.Id">@client.Name</option>
@@ -22,25 +22,25 @@
         </select>
     </div>
     <div class="form-field">
-        <label>Issue Year</label>
+        <label>@T("Issue Year")</label>
         <InputNumber @bind-Value="filterIssueYear" class="input" />
     </div>
     <div class="form-field">
-        <label>Issue Month</label>
+        <label>@T("Issue Month")</label>
         <InputNumber @bind-Value="filterIssueMonth" class="input" min="1" max="12" />
     </div>
     <div class="form-field">
-        <label>Service Year</label>
+        <label>@T("Service Year")</label>
         <InputNumber @bind-Value="filterServiceYear" class="input" />
     </div>
     <div class="form-field">
-        <label>Service Month</label>
+        <label>@T("Service Month")</label>
         <InputNumber @bind-Value="filterServiceMonth" class="input" min="1" max="12" />
     </div>
     <div class="form-field">
-        <label>Status</label>
+        <label>@T("Status")</label>
         <select class="input" @bind="filterStatus">
-            <option value="">All</option>
+            <option value="">@T("All")</option>
             @foreach (var status in Enum.GetValues<InvoiceStatus>())
             {
                 <option value="@status">@InvoiceRules.GetLabel(status)</option>
@@ -48,12 +48,12 @@
         </select>
     </div>
     <div class="form-field">
-        <label>Search</label>
-        <InputText @bind-Value="filterSearch" class="input" placeholder="Invoice number or client" />
+        <label>@T("Search")</label>
+        <InputText @bind-Value="filterSearch" class="input" placeholder="@T("Invoice number or client")" />
     </div>
     <div class="form-field actions-inline">
-        <button class="btn btn-secondary" @onclick="LoadAsync">Filter</button>
-        <button class="btn btn-secondary" @onclick="ClearFilters">Clear</button>
+        <button class="btn btn-secondary" @onclick="LoadAsync">@T("Filter")</button>
+        <button class="btn btn-secondary" @onclick="ClearFilters">@T("Clear")</button>
     </div>
 </div>
 
@@ -64,24 +64,24 @@
 
 @if (invoices is null)
 {
-    <p>Loading...</p>
+    <p>@T("Loading...")</p>
 }
 else if (invoices.Count == 0)
 {
-    <p>No invoices found.</p>
+    <p>@T("No invoices found.")</p>
 }
 else
 {
     <table class="data-table">
         <thead>
             <tr>
-                <th>Number</th>
-                <th>Client</th>
-                <th>Service</th>
-                <th>Issue</th>
-                <th>Amount</th>
-                <th>Due Date</th>
-                <th>Status</th>
+                <th>@T("Number")</th>
+                <th>@T("Client")</th>
+                <th>@T("Service")</th>
+                <th>@T("Issue")</th>
+                <th>@T("Amount")</th>
+                <th>@T("Due Date")</th>
+                <th>@T("Status")</th>
                 <th>NFS-e</th>
                 <th></th>
             </tr>
@@ -104,7 +104,7 @@ else
                         }
                         @if (current is not null)
                         {
-                            <a href="/nfse/@current.Id">@(current.Status == NfseStatus.Draft ? "Draft" : "nº " + current.Number)</a>
+                            <a href="/nfse/@current.Id">@(current.Status == NfseStatus.Draft ? T("Draft") : "nº " + current.Number)</a>
                         }
                         else
                         {
@@ -113,7 +113,7 @@ else
                     </td>
                     <td>
                         <div class="row-actions">
-                            <a class="btn btn-secondary" href="/invoices/@invoice.Id">View</a>
+                            <a class="btn btn-secondary" href="/invoices/@invoice.Id">@T("View")</a>
                             <InvoiceActions Invoice="invoice" Compact="true" OnChanged="OnActionAsync" OnDeleted="OnActionAsync" />
                         </div>
                     </td>

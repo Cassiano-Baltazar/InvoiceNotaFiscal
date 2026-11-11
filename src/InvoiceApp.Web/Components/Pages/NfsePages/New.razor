@@ -3,17 +3,17 @@
 @inject INfseService NfseService
 @inject NavigationManager Navigation
 
-<PageTitle>New NFS-e Draft</PageTitle>
+<PageTitle>@T("New NFS-e Draft")</PageTitle>
 
-<h1>New NFS-e Draft</h1>
+<h1>@T("New NFS-e Draft")</h1>
 
-<p>The draft is prepared here with the invoice data. After issuing the NFS-e on the city hall portal, import its XML to complete it.</p>
+<p>@T("The draft is prepared here with the invoice data. After issuing the NFS-e on the city hall portal, import its XML to complete it.")</p>
 
 <div class="form-grid narrow">
     <div class="form-field full-width">
-        <label>Invoice</label>
+        <label>@T("Invoice")</label>
         <select class="input" @bind="invoiceId">
-            <option value="0">Select an invoice...</option>
+            <option value="0">@T("Select an invoice...")</option>
             @foreach (var option in options)
             {
                 <option value="@option.Id">@option.Label</option>
@@ -28,8 +28,8 @@
 }
 
 <div class="actions-row">
-    <button class="btn btn-primary" disabled="@(invoiceId == 0)" @onclick="CreateAsync">Create Draft</button>
-    <a class="btn btn-secondary" href="/nfse">Back</a>
+    <button class="btn btn-primary" disabled="@(invoiceId == 0)" @onclick="CreateAsync">@T("Create Draft")</button>
+    <a class="btn btn-secondary" href="/nfse">@T("Back")</a>
 </div>
 
 @code {

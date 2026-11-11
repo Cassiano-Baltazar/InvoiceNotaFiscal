@@ -57,6 +57,25 @@ a {
     color: #fff;
 }
 
+.sidebar .language-switch {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-top: 16px;
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.sidebar .language-switch span {
+    margin-right: 4px;
+}
+
+.sidebar .language-switch a {
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
 .content {
     padding: 24px 32px;
 }

@@ -16,7 +16,12 @@ public static class SchemaUpgrader
         await AddForeignTradeColumnsAsync(db, cancellationToken);
         await AddNationalApiColumnsAsync(db, cancellationToken);
         await AddMonthlyWithdrawalAsync(db, cancellationToken);
+        await AddLanguageAsync(db, cancellationToken);
     }
+
+    // v8: language of the app screens.
+    private static Task AddLanguageAsync(AppDbContext db, CancellationToken cancellationToken) =>
+        AddColumnAsync(db, "CompanySettings", "Language", "TEXT NOT NULL DEFAULT 'en'", cancellationToken);
 
     // v7: monthly withdrawal (DAS, pró-labore, accountant) and revenue outside the app.
     private static async Task AddMonthlyWithdrawalAsync(AppDbContext db, CancellationToken cancellationToken)

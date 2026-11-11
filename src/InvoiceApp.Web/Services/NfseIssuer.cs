@@ -2,6 +2,7 @@ using InvoiceApp.Web.Data;
 using InvoiceApp.Web.Data.Entities;
 using InvoiceApp.Web.Models;
 using Microsoft.EntityFrameworkCore;
+using static InvoiceApp.Web.Services.Ui;
 
 namespace InvoiceApp.Web.Services;
 
@@ -28,20 +29,20 @@ public class NfseIssuer(
     {
         var nfse = await db.Nfses.Include(x => x.Invoice).FirstOrDefaultAsync(x => x.Id == nfseId, cancellationToken);
         if (nfse is null)
-            return NfseActionResult.Fail("NFS-e not found.");
+            return NfseActionResult.Fail(T("NFS-e not found."));
         if (nfse.Status != NfseStatus.Draft)
-            return NfseActionResult.Fail("Only drafts can be issued.", nfseId);
+            return NfseActionResult.Fail(T("Only drafts can be issued."), nfseId);
         if (nfse.Invoice.Status == InvoiceStatus.Cancelled)
-            return NfseActionResult.Fail("The invoice is cancelled.", nfseId);
+            return NfseActionResult.Fail(T("The invoice is cancelled."), nfseId);
 
         var company = await db.CompanySettings.FirstAsync(cancellationToken);
         var problems = DpsXml.Check(nfse, company);
         if (problems.Count > 0)
-            return NfseActionResult.Fail("The NFS-e cannot be issued yet: " + string.Join(" ", problems), nfseId);
+            return NfseActionResult.Fail(T("The NFS-e cannot be issued yet:") + " " + string.Join(" ", problems), nfseId);
 
         var issued = await db.Nfses.AnyAsync(x => x.InvoiceId == nfse.InvoiceId && x.Status == NfseStatus.Issued, cancellationToken);
         if (issued && company.NfseEnvironment == NfseEnvironment.Production)
-            return NfseActionResult.Fail("The invoice already has an issued NFS-e.", nfseId);
+            return NfseActionResult.Fail(T("The invoice already has an issued NFS-e."), nfseId);
 
         System.Security.Cryptography.X509Certificates.X509Certificate2? certificate;
         try
@@ -54,15 +55,15 @@ public class NfseIssuer(
         }
 
         if (certificate is null)
-            return NfseActionResult.Fail("Upload the digital certificate in Settings first.", nfseId);
+            return NfseActionResult.Fail(T("Upload the digital certificate in Settings first."), nfseId);
 
         using (certificate)
         {
             var companyCnpj = DpsXml.Digits(company.Cnpj);
             if (!certificate.Subject.Contains(companyCnpj, StringComparison.Ordinal))
-                return NfseActionResult.Fail($"The certificate ({certificate.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false)}) is not from the company CNPJ in Settings.", nfseId);
+                return NfseActionResult.Fail(T("The certificate ({0}) is not from the company CNPJ in Settings.", certificate.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false)), nfseId);
             if (certificate.NotAfter < time.GetLocalNow().DateTime)
-                return NfseActionResult.Fail("The digital certificate has expired.", nfseId);
+                return NfseActionResult.Fail(T("The digital certificate has expired."), nfseId);
 
             var environment = company.NfseEnvironment;
             try
@@ -92,13 +93,13 @@ public class NfseIssuer(
 
                 var schemaErrors = DpsXml.Validate(document);
                 if (schemaErrors.Count > 0)
-                    return await FailAsync(nfse, "The DPS does not match the official layout: " + string.Join(" ", schemaErrors), cancellationToken);
+                    return await FailAsync(nfse, T("The DPS does not match the official layout:") + " " + string.Join(" ", schemaErrors), cancellationToken);
 
                 DpsXml.AdaptToServerLayout(document, environment);
                 var signed = DpsXml.Sign(document, certificate);
                 var result = await api.SendDpsAsync(environment, certificate, signed, cancellationToken);
                 if (!result.Issued)
-                    return await FailAsync(nfse, "Rejected by the national NFS-e system: " + string.Join("; ", result.Errors), cancellationToken);
+                    return await FailAsync(nfse, T("Rejected by the national NFS-e system:") + " " + string.Join("; ", result.Errors), cancellationToken);
 
                 return await CompleteAsync(nfse, environment, result.AccessKey!, result.NfseXml!, result.Alerts, cancellationToken);
             }
@@ -106,7 +107,7 @@ public class NfseIssuer(
             {
                 logger.LogWarning(ex, "NFS-e {Id}: could not reach the national API", nfse.Id);
                 return await FailAsync(nfse,
-                    $"Could not reach the national NFS-e system ({ex.Message}). Try again: the app first checks whether the note was issued, so it is not issued twice.",
+                    T("Could not reach the national NFS-e system ({0}). Try again: the app first checks whether the note was issued, so it is not issued twice.", ex.Message),
                     cancellationToken);
             }
         }
@@ -127,7 +128,7 @@ public class NfseIssuer(
         IReadOnlyList<NationalNfseMessage> alerts, CancellationToken cancellationToken)
     {
         var (number, processedAt) = DpsXml.ReadIssued(nfseXml);
-        var warnings = alerts.Select(x => $"Alert {x}").ToList();
+        var warnings = alerts.Select(x => T("Alert {0}", x)).ToList();
 
         if (environment == NfseEnvironment.RestrictedProduction)
         {
@@ -140,8 +141,8 @@ public class NfseIssuer(
             nfse.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
             return NfseActionResult.Ok(
-                $"Test NFS-e nº {number} accepted in the restricted production environment (no fiscal value). Access key: {accessKey}. " +
-                "Switch Settings to Production to issue it for real.", nfse.Id, warnings);
+                T("Test NFS-e nº {0} accepted in the restricted production environment (no fiscal value). Access key: {1}. Switch Settings to Production to issue it for real.", number, accessKey),
+                nfse.Id, warnings);
         }
 
         nfse.Status = NfseStatus.Issued;
@@ -157,7 +158,7 @@ public class NfseIssuer(
         nfse.IssueError = null;
         nfse.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
-        return NfseActionResult.Ok($"NFS-e nº {number} issued. Access key: {accessKey}.", nfse.Id, warnings);
+        return NfseActionResult.Ok(T("NFS-e nº {0} issued. Access key: {1}.", number, accessKey), nfse.Id, warnings);
     }
 
     private async Task<NfseActionResult> FailAsync(Nfse nfse, string message, CancellationToken cancellationToken)
