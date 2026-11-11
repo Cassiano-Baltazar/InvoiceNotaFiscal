@@ -244,6 +244,8 @@ public class SchemaUpgraderTests : IDisposable
 
     private void DropNationalApiColumns()
     {
+        // Later versions add columns after these, so they go too, as in a database of that version.
+        DropMonthlyWithdrawal();
         Execute("DROP INDEX \"IX_Nfses_DpsId\";");
         foreach (var column in new[] { "NfseEnvironment", "MunicipalityCode", "DpsSeries", "NextDpsNumber", "DefaultNationalTaxCode", "SimplesNacionalTaxRate", "MunicipalRegistration" })
             Execute($"ALTER TABLE \"CompanySettings\" DROP COLUMN \"{column}\";");
@@ -273,6 +275,36 @@ public class SchemaUpgraderTests : IDisposable
         Assert.Equal("1", company.DpsSeries);
         Assert.Equal(1, company.NextDpsNumber);
         Assert.Equal("010101", company.DefaultNationalTaxCode);
+    }
+
+    private void DropMonthlyWithdrawal()
+    {
+        Execute("DROP TABLE \"MonthlyTaxRecords\";");
+        foreach (var column in new[] { "CompanyStartDate", "AccountantMonthlyFee", "ProLaboreRate" })
+            Execute($"ALTER TABLE \"CompanySettings\" DROP COLUMN \"{column}\";");
+    }
+
+    [Fact]
+    public async Task Adds_monthly_withdrawal_matching_the_model()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        DropMonthlyWithdrawal();
+
+        using (var db = database.CreateContext())
+        {
+            await SchemaUpgrader.UpgradeAsync(db);
+            await SchemaUpgrader.UpgradeAsync(db);
+        }
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "CompanySettings"), Columns(database.Connection, "CompanySettings"));
+        Assert.Equal(Columns(fresh.Connection, "MonthlyTaxRecords"), Columns(database.Connection, "MonthlyTaxRecords"));
+        Assert.Equal(Indexes(fresh.Connection, "MonthlyTaxRecords"), Indexes(database.Connection, "MonthlyTaxRecords"));
+        using var check = database.CreateContext();
+        var company = await check.CompanySettings.SingleAsync();
+        Assert.Equal(28m, company.ProLaboreRate);
+        Assert.Equal(0m, company.AccountantMonthlyFee);
+        Assert.Null(company.CompanyStartDate);
     }
 
     private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)

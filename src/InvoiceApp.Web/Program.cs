@@ -33,6 +33,7 @@ builder.Services.AddScoped<INfseFileService, NfseFileService>();
 builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
 builder.Services.AddScoped<INfseService, NfseService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IWithdrawalService, WithdrawalService>();
 builder.Services.AddSingleton<IPdfExportService, PdfExportService>();
 
 builder.Services.AddRazorComponents()

@@ -15,6 +15,29 @@ public static class SchemaUpgrader
         await AddDigitalCertificatesAsync(db, cancellationToken);
         await AddForeignTradeColumnsAsync(db, cancellationToken);
         await AddNationalApiColumnsAsync(db, cancellationToken);
+        await AddMonthlyWithdrawalAsync(db, cancellationToken);
+    }
+
+    // v7: monthly withdrawal (DAS, pró-labore, accountant) and revenue outside the app.
+    private static async Task AddMonthlyWithdrawalAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        await AddColumnAsync(db, "CompanySettings", "CompanyStartDate", "TEXT NULL", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "AccountantMonthlyFee", "TEXT NOT NULL DEFAULT '0.0'", cancellationToken);
+        await AddColumnAsync(db, "CompanySettings", "ProLaboreRate", "TEXT NOT NULL DEFAULT '28.0'", cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "MonthlyTaxRecords" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_MonthlyTaxRecords" PRIMARY KEY AUTOINCREMENT,
+                "Year" INTEGER NOT NULL,
+                "Month" INTEGER NOT NULL,
+                "OtherRevenueBrl" TEXT NOT NULL,
+                "DasGuideAmount" TEXT NULL
+            );
+            """, cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_MonthlyTaxRecords_Year_Month" ON "MonthlyTaxRecords" ("Year", "Month");
+            """, cancellationToken);
     }
 
     // v6: issuing NFS-e through the national API (Emissor Nacional).

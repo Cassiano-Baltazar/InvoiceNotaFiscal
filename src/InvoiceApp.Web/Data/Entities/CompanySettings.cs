@@ -27,6 +27,11 @@ public class CompanySettings
     public string DefaultNationalTaxCode { get; set; } = "010101";
     public decimal SimplesNacionalTaxRate { get; set; }
     public string? MunicipalRegistration { get; set; }
+
+    // Monthly withdrawal: what is left of the month's revenue after DAS, pró-labore taxes and the accountant.
+    public DateOnly? CompanyStartDate { get; set; }
+    public decimal AccountantMonthlyFee { get; set; }
+    public decimal ProLaboreRate { get; set; } = 28m;
 }
 
 /// <summary>Environment of the national NFS-e API. Values are the tpAmb codes of the DPS.</summary>
