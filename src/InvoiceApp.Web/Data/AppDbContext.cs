@@ -36,6 +36,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasIndex(x => new { x.Year, x.Month }).IsUnique();
             entity.Property(x => x.OtherRevenueBrl).HasPrecision(18, 2);
             entity.Property(x => x.DasGuideAmount).HasPrecision(18, 2);
+            entity.Property(x => x.ProLaboreDeclared).HasPrecision(18, 2);
         });
 
         modelBuilder.Entity<DigitalCertificate>(entity =>

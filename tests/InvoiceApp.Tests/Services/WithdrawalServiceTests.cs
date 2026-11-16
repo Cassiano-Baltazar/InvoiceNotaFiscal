@@ -136,4 +136,55 @@ public class WithdrawalServiceTests : ServiceTestBase
 
         Assert.Contains(result.Warnings, x => x.Contains("Anexo V"));
     }
+
+    [Fact]
+    public async Task Without_declared_pro_labore_the_das_is_in_anexo_v()
+    {
+        // The real case of October 2026: no pró-labore declared in August and September.
+        SeedCompany();
+        SeedNote(2026, 9, 21_489.08m);
+        SeedNote(2026, 10, 21_755.05m);
+        await CreateService().SaveMonthAsync(2026, 8, 0m, null, 0m);
+        await CreateService().SaveMonthAsync(2026, 9, 0m, null, 0m);
+        await CreateService().SaveMonthAsync(2026, 10, 0m, null, 0m);
+
+        var result = await CreateService().GetMonthAsync(2026, 10);
+
+        Assert.Equal(128_934.48m, result.Rbt12);
+        Assert.Equal(0.01m, result.FatorR);
+        Assert.True(result.AnexoV);
+        Assert.Equal(2_321.64m, result.EstimatedDas);
+        Assert.Equal(0m, result.ProLaboreGross);
+        Assert.Equal(0m, result.PayrollTaxes);
+        Assert.Contains(result.Warnings, x => x.Contains("Anexo V"));
+    }
+
+    [Fact]
+    public async Task Declared_pro_labore_replaces_the_percentage()
+    {
+        SeedCompany();
+        SeedNote(2026, 11, 15_487.82m);
+
+        await CreateService().SaveMonthAsync(2026, 11, 0m, null, 6_160m);
+        var result = await CreateService().GetMonthAsync(2026, 11);
+
+        Assert.Equal(6_160m, result.ProLaboreDeclared);
+        Assert.Equal(6_160m, result.ProLaboreGross);
+        Assert.Equal(677.60m, result.Inss);
+        Assert.Equal(440.48m, result.Irrf);
+        Assert.False(result.AnexoV);
+    }
+
+    [Fact]
+    public async Task History_lists_the_months_since_the_start_newest_first()
+    {
+        SeedCompany();
+        SeedNote(2026, 10, 21_755.05m);
+        SeedNote(2026, 11, 15_487.82m);
+
+        var history = await CreateService().GetHistoryAsync(2026, 11);
+
+        Assert.Equal([(2026, 11), (2026, 10), (2026, 9), (2026, 8)], history.Select(x => (x.Year, x.Month)).ToList());
+        Assert.Equal(21_755.05m, history[1].Revenue);
+    }
 }

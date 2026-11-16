@@ -58,4 +58,30 @@ public class WithdrawalCalculatorTests
     {
         Assert.Equal(expected, WithdrawalCalculator.Irrf(proLabore, inss));
     }
+
+    [Fact]
+    public void Anexo_v_export_rate_matches_the_october_2026_declaration()
+    {
+        // PGDAS-D 10/2026: R$ 43.244,13 in Anexo V, bracket 1, debt R$ 4.614,91 (IRPJ, CSLL and CPP only).
+        var rate = WithdrawalCalculator.ExportDasRate(128_934.48m, anexoV: true);
+
+        Assert.Equal(4_614.91m, Math.Round(43_244.13m * rate, 2));
+        Assert.Equal("V", WithdrawalCalculator.BracketFor(128_934.48m, anexoV: true).Anexo);
+    }
+
+    [Fact]
+    public void Anexo_iii_export_rate_matches_the_october_2026_declaration()
+    {
+        // PGDAS-D 10/2026: R$ 21.755,05 in Anexo III, debt R$ 664,40.
+        Assert.Equal(664.40m, Math.Round(21_755.05m * WithdrawalCalculator.ExportDasRate(128_934.48m), 2));
+    }
+
+    [Theory]
+    [InlineData(0, 21_489.08, 0, 21_755.05, 0.01)]       // no pró-labore declared: minimum 0,01
+    [InlineData(6_017, 21_489.08, 0, 21_755.05, 0.28)]   // months before decide
+    [InlineData(0, 0, 4_336.59, 15_487.82, 0.28)]        // first month: the month itself
+    public void Fator_r_is_payroll_over_revenue(decimal previousPayroll, decimal previousRevenue, decimal payroll, decimal revenue, decimal expected)
+    {
+        Assert.Equal(expected, WithdrawalCalculator.FatorR(previousPayroll, previousRevenue, payroll, revenue));
+    }
 }
