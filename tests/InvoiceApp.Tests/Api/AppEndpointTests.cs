@@ -56,6 +56,24 @@ public class AppEndpointTests : IClassFixture<AppFactory>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Pdf_endpoint_shows_the_reason_when_the_pdf_cannot_be_made()
+    {
+        var id = SeedInvoice();
+        factory.Pdf.ShouldFail = true;
+        try
+        {
+            var response = await client.GetAsync($"/api/invoices/{id}/pdf");
+
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Contains("Browser not available", await response.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            factory.Pdf.ShouldFail = false;
+        }
+    }
+
     [Theory]
     [InlineData("/", "Dashboard")]
     [InlineData("/clients", "Sample Client")]

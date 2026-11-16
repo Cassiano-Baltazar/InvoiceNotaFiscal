@@ -146,6 +146,7 @@ public static partial class Ui
         ["Select a client."] = "Selecione um cliente.",
         ["Service month is not valid."] = "Mês do serviço inválido.",
         ["Invoice {0} created."] = "Invoice {0} criada.",
+        ["Failed to export PDF: {0}"] = "Falha ao exportar o PDF: {0}",
         ["Items"] = "Itens",
         ["Qty"] = "Qtd.",
         ["Unit"] = "Unidade",
