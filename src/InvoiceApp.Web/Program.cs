@@ -53,16 +53,22 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 
-app.MapGet("/api/invoices/{id:int}/pdf", async (int id, IInvoiceService invoiceService) =>
+app.MapGet("/api/invoices/{id:int}/pdf", async (int id, IInvoiceService invoiceService, ILogger<Program> logger) =>
 {
     try
     {
         var pdf = await invoiceService.ExportPdfAsync(id);
         return Results.File(pdf, "application/pdf", $"invoice-{id}.pdf");
     }
-    catch (InvalidOperationException)
+    catch (InvalidOperationException ex) when (ex.Message == Ui.T("Invoice not found."))
     {
         return Results.NotFound();
+    }
+    catch (Exception ex)
+    {
+        // Shows the real reason (e.g. Edge could not be started) instead of the generic error page.
+        logger.LogError(ex, "Failed to export PDF for invoice {Id}", id);
+        return Results.Text(Ui.T("Failed to export PDF: {0}", ex.Message), "text/plain; charset=utf-8", statusCode: 500);
     }
 });
 
