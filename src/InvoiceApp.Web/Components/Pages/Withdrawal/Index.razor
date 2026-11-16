@@ -40,44 +40,50 @@ else
         <p class="message message-warning">@warning</p>
     }
 
-    <h2>@T("Calculation")</h2>
-    <table class="data-table summary-table withdrawal-table">
-        <tbody>
-            <tr><td>@T("Notes issued in the month")</td><td>@NfseLabels.Brl(result.NotesRevenue)</td></tr>
-            @if (result.OtherRevenue > 0)
-            {
-                <tr><td>@T("Other revenue (outside the app)")</td><td>@NfseLabels.Brl(result.OtherRevenue)</td></tr>
-            }
-            <tr><td><strong>@T("Revenue")</strong></td><td><strong>@NfseLabels.Brl(result.Revenue)</strong></td></tr>
-            <tr data-row="das"><td>(−) DAS @(result.DasGuideAmount is null ? T("({0}, estimated)", Percent(result.DasRate)) : T("(guide)"))</td><td>@NfseLabels.Brl(result.Das)</td></tr>
-            <tr><td>@T("(−) Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
-            <tr><td>@T("(−) Pró-labore gross ({0}%)", result.ProLaboreRate.ToString("0.##", PtBr))</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
-            <tr data-row="profit"><td><strong>@T("= Profit distribution (exempt)")</strong></td><td><strong>@NfseLabels.Brl(Math.Max(0, result.Profit))</strong></td></tr>
-        </tbody>
-    </table>
-
-    <h2>Pró-labore</h2>
-    <table class="data-table summary-table">
-        <tbody>
-            <tr><td>@T("Gross")</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
-            <tr><td>@T("(−) INSS 11%")</td><td>@NfseLabels.Brl(result.Inss)</td></tr>
-            <tr data-row="irrf"><td>(−) IRRF</td><td>@NfseLabels.Brl(result.Irrf)</td></tr>
-            <tr><td><strong>@T("Net")</strong></td><td><strong>@NfseLabels.Brl(result.ProLaboreNet)</strong></td></tr>
-        </tbody>
-    </table>
-    <p class="hint">@T("INSS and IRRF are paid together in one guide ({0}).", NfseLabels.Brl(result.PayrollTaxes))</p>
-
-    <h2>@T("Where the money goes")</h2>
-    <table class="data-table summary-table">
-        <tbody>
-            <tr><td>@T("Pró-labore net")</td><td>@NfseLabels.Brl(result.ProLaboreNet)</td></tr>
-            <tr><td>@T("Profit distribution")</td><td>@NfseLabels.Brl(Math.Max(0, result.Profit))</td></tr>
-            <tr><td><strong>@T("Total to withdraw")</strong></td><td><strong>@NfseLabels.Brl(result.TotalWithdrawal)</strong></td></tr>
-            <tr><td>@T("DAS guide")</td><td>@NfseLabels.Brl(result.Das)</td></tr>
-            <tr><td>@T("INSS + IRRF guide")</td><td>@NfseLabels.Brl(result.PayrollTaxes)</td></tr>
-            <tr><td>@T("Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
-        </tbody>
-    </table>
+    <div class="withdrawal-groups" data-field="withdrawal-groups">
+        <section>
+            <h2>@T("Calculation")</h2>
+            <table class="data-table summary-table withdrawal-table">
+                <tbody>
+                    <tr><td>@T("Notes issued in the month")</td><td>@NfseLabels.Brl(result.NotesRevenue)</td></tr>
+                    @if (result.OtherRevenue > 0)
+                    {
+                        <tr><td>@T("Other revenue (outside the app)")</td><td>@NfseLabels.Brl(result.OtherRevenue)</td></tr>
+                    }
+                    <tr><td><strong>@T("Revenue")</strong></td><td><strong>@NfseLabels.Brl(result.Revenue)</strong></td></tr>
+                    <tr data-row="das"><td>(−) DAS @(result.DasGuideAmount is null ? T("({0}, estimated)", Percent(result.DasRate)) : T("(guide)"))</td><td>@NfseLabels.Brl(result.Das)</td></tr>
+                    <tr><td>@T("(−) Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
+                    <tr><td>@T("(−) Pró-labore gross ({0}%)", result.ProLaboreRate.ToString("0.##", PtBr))</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
+                    <tr data-row="profit"><td><strong>@T("= Profit distribution (exempt)")</strong></td><td><strong>@NfseLabels.Brl(Math.Max(0, result.Profit))</strong></td></tr>
+                </tbody>
+            </table>
+        </section>
+        <section>
+            <h2>Pró-labore</h2>
+            <table class="data-table summary-table">
+                <tbody>
+                    <tr><td>@T("Gross")</td><td>@NfseLabels.Brl(result.ProLaboreGross)</td></tr>
+                    <tr><td>@T("(−) INSS 11%")</td><td>@NfseLabels.Brl(result.Inss)</td></tr>
+                    <tr data-row="irrf"><td>(−) IRRF</td><td>@NfseLabels.Brl(result.Irrf)</td></tr>
+                    <tr><td><strong>@T("Net")</strong></td><td><strong>@NfseLabels.Brl(result.ProLaboreNet)</strong></td></tr>
+                </tbody>
+            </table>
+            <p class="hint">@T("INSS and IRRF are paid together in one guide ({0}).", NfseLabels.Brl(result.PayrollTaxes))</p>
+        </section>
+        <section>
+            <h2>@T("Where the money goes")</h2>
+            <table class="data-table summary-table">
+                <tbody>
+                    <tr><td>@T("Pró-labore net")</td><td>@NfseLabels.Brl(result.ProLaboreNet)</td></tr>
+                    <tr><td>@T("Profit distribution")</td><td>@NfseLabels.Brl(Math.Max(0, result.Profit))</td></tr>
+                    <tr><td><strong>@T("Total to withdraw")</strong></td><td><strong>@NfseLabels.Brl(result.TotalWithdrawal)</strong></td></tr>
+                    <tr><td>@T("DAS guide")</td><td>@NfseLabels.Brl(result.Das)</td></tr>
+                    <tr><td>@T("INSS + IRRF guide")</td><td>@NfseLabels.Brl(result.PayrollTaxes)</td></tr>
+                    <tr><td>@T("Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
 
     <h2>DAS</h2>
     <p class="hint" data-field="das-detail">
@@ -97,7 +103,8 @@ else
             <input type="number" step="0.01" class="input" @bind="otherRevenue" data-field="other-revenue" />
             <small>@T("Notes issued outside the app (e.g. on the city hall portal). Fill the earlier months too, so the RBT12 is right.")</small>
         </div>
-        <div class="form-field actions-inline">
+        <div class="form-field actions-inline actions-top">
+            <label aria-hidden="true">&nbsp;</label>
             <button class="btn btn-primary" @onclick="SaveAsync" data-action="save-month">@T("Save month")</button>
         </div>
     </div>

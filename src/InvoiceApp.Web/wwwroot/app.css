@@ -232,6 +232,24 @@ select.input {
     align-self: end;
 }
 
+/* Next to inputs that have a hint below them: an empty label puts the button on the inputs' line. */
+.actions-inline.actions-top {
+    align-self: start;
+    align-items: flex-start;
+}
+
+/* Groups of the withdrawal screen side by side when there is room, one under the other when not. */
+.withdrawal-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 0 32px;
+    align-items: start;
+}
+
+.withdrawal-groups .summary-table {
+    max-width: none;
+}
+
 @media (max-width: 960px) {
     .app-shell {
         grid-template-columns: 1fr;
