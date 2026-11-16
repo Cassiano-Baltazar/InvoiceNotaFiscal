@@ -53,8 +53,21 @@
             <InputText @bind-Value="model.CurrencyLabel" class="input" placeholder="@T("Canadian Dollars")" />
         </div>
         <div class="form-field">
-            <label>@T("Monthly Amount")</label>
-            <InputNumber @bind-Value="model.MonthlyAmount" class="input" />
+            <label>@T("Billing Type")</label>
+            <InputSelect @bind-Value="model.BillingType" class="input" data-field="billing-type">
+                @foreach (var type in Enum.GetValues<ClientBillingType>())
+                {
+                    <option value="@type">@ClientLabels.BillingTypeLabel(type)</option>
+                }
+            </InputSelect>
+            @if (model.BillingType == ClientBillingType.Freelance)
+            {
+                <small>@T("Billed per job: not included in Generate Month. Create each invoice with New Invoice.")</small>
+            }
+        </div>
+        <div class="form-field">
+            <label>@(model.BillingType == ClientBillingType.Freelance ? T("Usual Amount per Job (optional)") : T("Monthly Amount"))</label>
+            <InputNumber @bind-Value="model.MonthlyAmount" class="input" data-field="amount" />
         </div>
         <div class="form-field full-width">
             <label>@T("Wise Payment Link")</label>

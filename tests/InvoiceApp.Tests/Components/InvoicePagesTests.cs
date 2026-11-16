@@ -303,7 +303,7 @@ public class InvoicePagesTests : ComponentTestBase
     public void Generate_creates_invoices_and_lists_numbers()
     {
         var cut = Render<Generate>();
-        Assert.Contains("Active clients:</strong> 2", cut.Markup);
+        Assert.Contains("Active monthly clients:</strong> 2", cut.Markup);
 
         cut.FindAll("input")[0].Change("2026");
         cut.FindAll("input")[1].Change("10");
@@ -313,5 +313,83 @@ public class InvoicePagesTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.Contains("2 invoice(s) generated successfully.", cut.Markup));
         Assert.Equal(["INV-2026-10-001", "INV-2026-10-002"], cut.FindAll(".success-list li").Select(x => x.TextContent));
         Assert.Contains("September 2026", cut.Markup);
+    }
+
+    // ---------- New ----------
+
+    [Fact]
+    public void New_invoice_for_freelance_client_fills_client_data_and_creates_invoice()
+    {
+        var jemb = Database.SeedClient("Jemb", amount: 440m, currency: "AUD", billingType: ClientBillingType.Freelance);
+        Navigation.NavigateTo($"/invoices/new?clientId={jemb.Id}");
+
+        var cut = Render<New>();
+
+        cut.WaitForAssertion(() => Assert.Equal("AUD", cut.Find("[data-field=currency]").GetAttribute("value")));
+        Assert.Equal(jemb.Id.ToString(), cut.Find("[data-field=client]").GetAttribute("value"));
+        Assert.Equal("job", cut.Find(".item-unit").GetAttribute("value"));
+        Assert.Equal(440m, decimal.Parse(cut.Find(".item-price").GetAttribute("value")!, System.Globalization.CultureInfo.InvariantCulture));
+        // Freelance clients are listed first.
+        Assert.StartsWith("Jemb", cut.FindAll("[data-field=client] option")[1].TextContent);
+
+        cut.Find(".item-description").Change("Penetration test report");
+        cut.Find("[data-field=invoice-date]").Change("2026-11-16");
+        Assert.Equal("2026-12-01", cut.Find("[data-field=due-date]").GetAttribute("value"));
+        cut.Find("input[type=checkbox]").Change(false);
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains("saved=", Navigation.Uri));
+        using var db = Database.CreateContext();
+        var invoice = db.Invoices.Single();
+        Assert.EndsWith($"/invoices/{invoice.Id}?saved=Invoice%20INV-2026-11-001%20created.", Navigation.Uri);
+        Assert.Equal("Jemb", invoice.ClientName);
+        Assert.Equal(440m, invoice.Total);
+        Assert.Equal("Penetration test report", invoice.ServiceDescription);
+    }
+
+    [Fact]
+    public void New_invoice_switching_client_refills_untouched_item()
+    {
+        var jemb = Database.SeedClient("Jemb", amount: 440m, currency: "AUD", billingType: ClientBillingType.Freelance);
+        var cut = Render<New>();
+
+        cut.Find("[data-field=client]").Change(alpha.Id.ToString());
+        Assert.Equal("month", cut.Find(".item-unit").GetAttribute("value"));
+        Assert.Equal("CAD", cut.Find("[data-field=currency]").GetAttribute("value"));
+
+        cut.Find("[data-field=client]").Change(jemb.Id.ToString());
+        Assert.Equal("job", cut.Find(".item-unit").GetAttribute("value"));
+        Assert.Equal("", cut.Find(".item-description").GetAttribute("value") ?? "");
+        Assert.Equal(440m, decimal.Parse(cut.Find(".item-price").GetAttribute("value")!, System.Globalization.CultureInfo.InvariantCulture));
+
+        // Once the user changed the item, switching client keeps it.
+        cut.Find(".item-price").Change("500");
+        cut.Find("[data-field=client]").Change(alpha.Id.ToString());
+        Assert.Equal(500m, decimal.Parse(cut.Find(".item-price").GetAttribute("value")!, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void New_invoice_shows_error_without_client()
+    {
+        var cut = Render<New>();
+
+        cut.Find("[data-field=currency]").Change("AUD");
+        cut.Find(".item-description").Change("Job");
+        cut.Find(".item-price").Change("100");
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains("Select a client.", cut.Find(".message-error").TextContent));
+        Assert.Empty(Database.CreateContext().Invoices);
+    }
+
+    [Fact]
+    public void Generate_says_freelance_clients_are_not_counted()
+    {
+        Database.SeedClient("Jemb", billingType: ClientBillingType.Freelance);
+
+        var cut = Render<Generate>();
+
+        Assert.Contains("Active monthly clients:</strong> 2", cut.Markup);
+        Assert.Contains("Freelance clients are not included", cut.Markup);
     }
 }

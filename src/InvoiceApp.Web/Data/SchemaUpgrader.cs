@@ -17,7 +17,12 @@ public static class SchemaUpgrader
         await AddNationalApiColumnsAsync(db, cancellationToken);
         await AddMonthlyWithdrawalAsync(db, cancellationToken);
         await AddLanguageAsync(db, cancellationToken);
+        await AddClientBillingTypeAsync(db, cancellationToken);
     }
+
+    // v9: clients billed per job (freelance) besides the monthly ones. Existing clients stay monthly.
+    private static Task AddClientBillingTypeAsync(AppDbContext db, CancellationToken cancellationToken) =>
+        AddColumnAsync(db, "Clients", "BillingType", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
 
     // v8: language of the app screens.
     private static Task AddLanguageAsync(AppDbContext db, CancellationToken cancellationToken) =>

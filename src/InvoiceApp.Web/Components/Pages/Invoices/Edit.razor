@@ -52,56 +52,7 @@ else
             </div>
         </div>
 
-        <h2>@T("Items")</h2>
-        <table class="data-table items-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>@T("Description")</th>
-                    <th>@T("Qty")</th>
-                    <th>@T("Unit")</th>
-                    <th>@T("Unit Price")</th>
-                    <th>@T("Amount")</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (var i = 0; i < model.Items.Count; i++)
-                {
-                    var item = model.Items[i];
-                    <tr class="item-row">
-                        <td>@(i + 1)</td>
-                        <td><InputText @bind-Value="item.Description" class="input item-description" /></td>
-                        <td><InputNumber @bind-Value="item.Quantity" class="input item-quantity" /></td>
-                        <td><InputText @bind-Value="item.Unit" class="input item-unit" placeholder="@T("month, hour...")" /></td>
-                        <td><InputNumber @bind-Value="item.UnitPrice" class="input item-price" /></td>
-                        <td class="item-amount">@item.Amount.ToString("N2")</td>
-                        <td>
-                            <button type="button" class="btn btn-secondary" data-action="remove-item"
-                                    disabled="@(model.Items.Count == 1)" @onclick="() => model.Items.Remove(item)">@T("Remove")</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <div class="actions-row">
-            <button type="button" class="btn btn-secondary" data-action="add-item" @onclick="AddItem">@T("Add Item")</button>
-        </div>
-
-        <div class="form-grid narrow totals-grid">
-            <div class="form-field">
-                <label>@T("Subtotal")</label>
-                <input class="input" data-field="subtotal" value="@model.Subtotal.ToString("N2")" disabled />
-            </div>
-            <div class="form-field">
-                <label>@T("Tax")</label>
-                <InputNumber @bind-Value="model.Tax" class="input" data-field="tax" />
-            </div>
-            <div class="form-field">
-                <label>@T("Total")</label>
-                <input class="input" data-field="total" value="@model.Total.ToString("N2")" disabled />
-            </div>
-        </div>
+        <InvoiceItemsEditor Model="model" />
 
         @if (!string.IsNullOrWhiteSpace(error))
         {
@@ -131,9 +82,6 @@ else
             model = InvoiceEditModel.FromInvoice(invoice);
         loaded = true;
     }
-
-    private void AddItem() =>
-        model.Items.Add(new InvoiceItemEditModel { Quantity = 1, Unit = model.Items.LastOrDefault()?.Unit ?? string.Empty });
 
     private async Task SaveAsync()
     {

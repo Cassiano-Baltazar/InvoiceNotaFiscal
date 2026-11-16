@@ -55,7 +55,7 @@ public sealed class TestDatabase : IDisposable
         return company;
     }
 
-    public Client SeedClient(string name = "Client A", bool isActive = true, decimal amount = 1000m, string currency = "CAD")
+    public Client SeedClient(string name = "Client A", bool isActive = true, decimal amount = 1000m, string currency = "CAD", ClientBillingType billingType = ClientBillingType.Monthly)
     {
         var client = new Client
         {
@@ -69,7 +69,8 @@ public sealed class TestDatabase : IDisposable
             CurrencyLabel = currency + " label",
             MonthlyAmount = amount,
             WisePaymentLink = "https://wise.com/pay/test",
-            IsActive = isActive
+            IsActive = isActive,
+            BillingType = billingType
         };
 
         using var db = CreateContext();

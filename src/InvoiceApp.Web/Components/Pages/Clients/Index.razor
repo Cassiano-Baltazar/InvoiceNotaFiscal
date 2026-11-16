@@ -26,6 +26,7 @@ else
                 <th>@T("Name")</th>
                 <th>@T("Country")</th>
                 <th>@T("Currency")</th>
+                <th>@T("Billing Type")</th>
                 <th>@T("Monthly Amount")</th>
                 <th>@T("Status")</th>
                 <th></th>
@@ -38,7 +39,8 @@ else
                     <td>@client.Name</td>
                     <td>@client.Country</td>
                     <td>@client.Currency</td>
-                    <td>@client.MonthlyAmount.ToString("N2")</td>
+                    <td>@ClientLabels.BillingTypeLabel(client.BillingType)</td>
+                    <td>@(client.BillingType == ClientBillingType.Monthly ? client.MonthlyAmount.ToString("N2") : "—")</td>
                     <td>@(client.IsActive ? T("Active") : T("Inactive"))</td>
                     <td><a href="/clients/@client.Id">@T("Edit")</a></td>
                 </tr>

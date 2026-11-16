@@ -7,7 +7,8 @@
 
 <h1>@T("Generate Monthly Invoices")</h1>
 
-<p>@T("Creates one invoice per active client for the selected issue month. Service month will be the previous month.")</p>
+<p>@T("Creates one invoice per active monthly client for the selected issue month. Service month will be the previous month.")</p>
+<p class="hint">@T("Freelance clients are not included: create their invoices with New Invoice.")</p>
 
 <div class="form-grid narrow">
     <div class="form-field">
@@ -27,7 +28,7 @@
 
 <div class="preview-box">
     <p><strong>@T("Service month:")</strong> @GetServiceMonthLabel()</p>
-    <p><strong>@T("Active clients:")</strong> @activeClients</p>
+    <p><strong>@T("Active monthly clients:")</strong> @activeClients</p>
     <p><strong>@T("Invoice numbers:")</strong> INV-@issueYear-@issueMonth.ToString("D2")-xxx</p>
 </div>
 
@@ -76,7 +77,7 @@
     protected override async Task OnInitializedAsync()
     {
         var clients = await ClientService.GetAllAsync();
-        activeClients = clients.Count(x => x.IsActive);
+        activeClients = clients.Count(x => x.IsActive && x.BillingType == ClientBillingType.Monthly);
     }
 
     private string GetServiceMonthLabel()
