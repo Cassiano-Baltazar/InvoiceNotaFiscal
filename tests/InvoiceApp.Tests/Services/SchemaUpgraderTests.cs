@@ -197,6 +197,8 @@ public class SchemaUpgraderTests : IDisposable
             context.Nfses.Add(new Nfse { InvoiceId = invoice.Id, TakerName = "X", Description = "Y", AmountBrl = 10m });
             context.SaveChanges();
         }
+        // Columns added later (v9) come after these, so a database from before v5 lacks them too.
+        Execute("ALTER TABLE \"Clients\" DROP COLUMN \"BillingType\";");
         foreach (var column in NewClientColumns)
             Execute($"ALTER TABLE \"Clients\" DROP COLUMN \"{column}\";");
         // Columns added later (v6) come after these, so a database from before v5 lacks them too.
@@ -329,6 +331,28 @@ public class SchemaUpgraderTests : IDisposable
         Assert.Equal(Columns(fresh.Connection, "CompanySettings"), Columns(database.Connection, "CompanySettings"));
         using var check = database.CreateContext();
         Assert.Equal("en", (await check.CompanySettings.SingleAsync()).Language);
+    }
+
+    // ---------- Client billing type ----------
+
+    [Fact]
+    public async Task Adds_billing_type_column_and_keeps_existing_clients_monthly()
+    {
+        MakeLegacyDatabaseWithOneInvoice();
+        Execute("ALTER TABLE \"Clients\" DROP COLUMN \"BillingType\";");
+
+        using (var db = database.CreateContext())
+        {
+            await SchemaUpgrader.UpgradeAsync(db);
+            await SchemaUpgrader.UpgradeAsync(db);
+        }
+
+        using var fresh = new TestDatabase();
+        Assert.Equal(Columns(fresh.Connection, "Clients"), Columns(database.Connection, "Clients"));
+        using var check = database.CreateContext();
+        var client = await check.Clients.SingleAsync();
+        Assert.Equal(ClientBillingType.Monthly, client.BillingType);
+        Assert.Equal(4000m, client.MonthlyAmount);
     }
 
     private static List<(string Name, bool Unique)> Indexes(SqliteConnection connection, string table)

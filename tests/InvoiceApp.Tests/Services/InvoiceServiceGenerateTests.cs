@@ -104,6 +104,32 @@ public class InvoiceServiceGenerateTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Skips_freelance_clients()
+    {
+        Database.SeedCompany();
+        Database.SeedClient("Monthly");
+        Database.SeedClient("Jemb", amount: 440m, billingType: ClientBillingType.Freelance);
+
+        var result = await CreateInvoiceService().GenerateMonthlyInvoicesAsync(Request());
+
+        Assert.Equal(["INV-2026-10-001"], result.InvoiceNumbers);
+        Assert.Empty(result.Errors);
+        Assert.Equal("Monthly", (await NewContext().Invoices.SingleAsync()).ClientName);
+    }
+
+    [Fact]
+    public async Task Returns_error_when_only_freelance_clients_are_active()
+    {
+        Database.SeedCompany();
+        Database.SeedClient("Jemb", billingType: ClientBillingType.Freelance);
+
+        var result = await CreateInvoiceService().GenerateMonthlyInvoicesAsync(Request());
+
+        Assert.Equal(0, result.CreatedCount);
+        Assert.Equal(["No active monthly clients found."], result.Errors);
+    }
+
+    [Fact]
     public async Task Returns_error_when_there_are_no_active_clients()
     {
         Database.SeedCompany();
@@ -112,7 +138,7 @@ public class InvoiceServiceGenerateTests : ServiceTestBase
         var result = await CreateInvoiceService().GenerateMonthlyInvoicesAsync(Request());
 
         Assert.Equal(0, result.CreatedCount);
-        Assert.Equal(["No active clients found."], result.Errors);
+        Assert.Equal(["No active monthly clients found."], result.Errors);
     }
 
     [Fact]

@@ -13,6 +13,7 @@ public interface IInvoiceService
     Task<Invoice?> GetInvoiceAsync(int id, CancellationToken cancellationToken = default);
     Task<InvoiceReportModel?> GetReportModelAsync(int id, CancellationToken cancellationToken = default);
     Task<GenerateInvoicesResult> GenerateMonthlyInvoicesAsync(GenerateInvoicesRequest request, CancellationToken cancellationToken = default);
+    Task<InvoiceActionResult> CreateAsync(InvoiceCreateModel model, CancellationToken cancellationToken = default);
     Task<InvoiceActionResult> UpdateAsync(int id, InvoiceEditModel model, CancellationToken cancellationToken = default);
     Task<InvoiceActionResult> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<InvoiceActionResult> CancelAsync(int id, CancellationToken cancellationToken = default);
@@ -91,11 +92,15 @@ public class InvoiceService(
     {
         var result = new GenerateInvoicesResult();
         var company = await db.CompanySettings.FirstAsync(cancellationToken);
-        var clients = await db.Clients.Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync(cancellationToken);
+        // Freelance clients are billed per job, with invoices created by hand.
+        var clients = await db.Clients
+            .Where(x => x.IsActive && x.BillingType == ClientBillingType.Monthly)
+            .OrderBy(x => x.Id)
+            .ToListAsync(cancellationToken);
 
         if (clients.Count == 0)
         {
-            result.Errors.Add(T("No active clients found."));
+            result.Errors.Add(T("No active monthly clients found."));
             return result;
         }
 
@@ -109,12 +114,7 @@ public class InvoiceService(
             .Select(x => x.ClientId)
             .ToListAsync(cancellationToken);
 
-        // Uses the highest sequence (not the count) so numbers are never reused after a delete.
-        var existingNumbers = await db.Invoices
-            .Where(x => x.IssueYear == request.IssueYear && x.IssueMonth == request.IssueMonth)
-            .Select(x => x.InvoiceNumber)
-            .ToListAsync(cancellationToken);
-        var sequence = existingNumbers.Count == 0 ? 0 : existingNumbers.Max(ExtractSequence);
+        var sequence = await LastSequenceAsync(request.IssueYear, request.IssueMonth, cancellationToken);
 
         foreach (var client in clients)
         {
@@ -194,6 +194,101 @@ public class InvoiceService(
         return result;
     }
 
+    public async Task<InvoiceActionResult> CreateAsync(InvoiceCreateModel model, CancellationToken cancellationToken = default)
+    {
+        var client = model.ClientId is int clientId
+            ? await db.Clients.FindAsync([clientId], cancellationToken)
+            : null;
+        if (client is null)
+            return InvoiceActionResult.Fail(T("Select a client."));
+
+        if (model.ServiceMonth is < 1 or > 12 || model.ServiceYear is < 2000 or > 2100)
+            return InvoiceActionResult.Fail(T("Service month is not valid."));
+
+        var validationError = Validate(model);
+        if (validationError is not null)
+            return InvoiceActionResult.Fail(validationError);
+
+        // Same numbering as "Generate Month": the issue month comes from the invoice date.
+        var issueYear = model.InvoiceDate.Year;
+        var issueMonth = model.InvoiceDate.Month;
+        var sequence = await LastSequenceAsync(issueYear, issueMonth, cancellationToken) + 1;
+        var items = ToItems(model);
+        var subtotal = items.Sum(x => x.Amount);
+
+        var invoice = new Invoice
+        {
+            InvoiceNumber = $"INV-{issueYear}-{issueMonth:D2}-{sequence:D3}",
+            ClientId = client.Id,
+            ClientName = client.Name,
+            ClientAddressLine1 = client.AddressLine1,
+            ClientAddressLine2 = client.AddressLine2,
+            ClientAddressLine3 = client.AddressLine3,
+            ClientCity = client.City,
+            ClientRegion = client.Region,
+            ClientPostalCode = client.PostalCode,
+            ClientCountry = client.Country,
+            ServiceYear = model.ServiceYear,
+            ServiceMonth = model.ServiceMonth,
+            IssueYear = issueYear,
+            IssueMonth = issueMonth,
+            InvoiceDate = model.InvoiceDate,
+            DueDate = model.DueDate,
+            Currency = model.Currency.Trim(),
+            CurrencyLabel = model.CurrencyLabel.Trim(),
+            Subtotal = subtotal,
+            Tax = model.Tax,
+            Total = subtotal + model.Tax,
+            WisePaymentLink = model.WisePaymentLink.Trim(),
+            ServiceDescription = items[0].Description,
+            Status = InvoiceStatus.Generated,
+            CreatedAt = DateTime.UtcNow,
+            Items = items
+        };
+
+        db.Invoices.Add(invoice);
+        await db.SaveChangesAsync(cancellationToken);
+
+        string? warning = null;
+        if (model.ExportPdf)
+        {
+            try
+            {
+                await SavePdfToDiskAsync(invoice.Id, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to export PDF for invoice {InvoiceNumber}", invoice.InvoiceNumber);
+                warning = T("PDF export failed for {0}: {1}", invoice.InvoiceNumber, ex.Message);
+            }
+        }
+
+        return InvoiceActionResult.Ok(T("Invoice {0} created.", invoice.InvoiceNumber), warning, invoice.Id);
+    }
+
+    // Uses the highest sequence (not the count) so numbers are never reused after a delete.
+    private async Task<int> LastSequenceAsync(int issueYear, int issueMonth, CancellationToken cancellationToken)
+    {
+        var numbers = await db.Invoices
+            .Where(x => x.IssueYear == issueYear && x.IssueMonth == issueMonth)
+            .Select(x => x.InvoiceNumber)
+            .ToListAsync(cancellationToken);
+        return numbers.Count == 0 ? 0 : numbers.Max(ExtractSequence);
+    }
+
+    private static List<InvoiceItem> ToItems(InvoiceEditModel model) =>
+        model.Items
+            .Select((item, index) => new InvoiceItem
+            {
+                Position = index + 1,
+                Description = item.Description.Trim(),
+                Quantity = item.Quantity,
+                Unit = item.Unit.Trim(),
+                UnitPrice = item.UnitPrice,
+                Amount = item.Amount
+            })
+            .ToList();
+
     public async Task<InvoiceActionResult> UpdateAsync(int id, InvoiceEditModel model, CancellationToken cancellationToken = default)
     {
         var invoice = await db.Invoices
@@ -219,17 +314,7 @@ public class InvoiceService(
         invoice.WisePaymentLink = model.WisePaymentLink.Trim();
 
         db.InvoiceItems.RemoveRange(invoice.Items);
-        invoice.Items = model.Items
-            .Select((item, index) => new InvoiceItem
-            {
-                Position = index + 1,
-                Description = item.Description.Trim(),
-                Quantity = item.Quantity,
-                Unit = item.Unit.Trim(),
-                UnitPrice = item.UnitPrice,
-                Amount = item.Amount
-            })
-            .ToList();
+        invoice.Items = ToItems(model);
 
         invoice.Subtotal = invoice.Items.Sum(x => x.Amount);
         invoice.Total = invoice.Subtotal + invoice.Tax;

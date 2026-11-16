@@ -43,6 +43,12 @@ public static partial class Ui
         ["Currency"] = "Moeda",
         ["Currency Label"] = "Nome da moeda",
         ["Monthly Amount"] = "Valor mensal",
+        ["Billing Type"] = "Tipo de cobrança",
+        ["Monthly"] = "Mensal",
+        ["Freelance (per job)"] = "Freelance (por job)",
+        ["Usual Amount per Job (optional)"] = "Valor usual por job (opcional)",
+        ["Billed per job: not included in Generate Month. Create each invoice with New Invoice."] =
+            "Cobrado por job: não entra em Gerar mês. Crie cada invoice em Nova invoice.",
         ["Wise Payment Link"] = "Link de pagamento Wise",
         ["Active"] = "Ativo",
         ["Inactive"] = "Inativo",
@@ -133,6 +139,13 @@ public static partial class Ui
         ["This invoice was already sent. Saving changes will set it back to Not Sent."] =
             "Esta invoice já foi enviada. Salvar as alterações volta o status para Não enviada.",
         ["Invoice Date"] = "Data da invoice",
+        ["New Invoice"] = "Nova invoice",
+        ["Create Invoice"] = "Criar invoice",
+        ["Creates one invoice by hand, with the amount of this job. Use it for freelance clients (or an extra invoice for a monthly client)."] =
+            "Cria uma invoice manualmente, com o valor deste job. Use para clientes freelance (ou uma invoice extra de um cliente mensal).",
+        ["Select a client."] = "Selecione um cliente.",
+        ["Service month is not valid."] = "Mês do serviço inválido.",
+        ["Invoice {0} created."] = "Invoice {0} criada.",
         ["Items"] = "Itens",
         ["Qty"] = "Qtd.",
         ["Unit"] = "Unidade",
@@ -145,18 +158,20 @@ public static partial class Ui
 
         // Generate month
         ["Generate Monthly Invoices"] = "Gerar invoices do mês",
-        ["Creates one invoice per active client for the selected issue month. Service month will be the previous month."] =
-            "Cria uma invoice por cliente ativo para o mês de emissão escolhido. O mês do serviço será o mês anterior.",
+        ["Creates one invoice per active monthly client for the selected issue month. Service month will be the previous month."] =
+            "Cria uma invoice por cliente mensal ativo para o mês de emissão escolhido. O mês do serviço será o mês anterior.",
+        ["Freelance clients are not included: create their invoices with New Invoice."] =
+            "Clientes freelance não entram: crie as invoices deles em Nova invoice.",
         ["Export PDF to output folder"] = "Exportar PDF para a pasta de saída",
         ["Service month:"] = "Mês do serviço:",
-        ["Active clients:"] = "Clientes ativos:",
+        ["Active monthly clients:"] = "Clientes mensais ativos:",
         ["Invoice numbers:"] = "Números das invoices:",
         ["Generating..."] = "Gerando...",
         ["{0} invoice(s) generated successfully."] = "{0} invoice(s) gerada(s) com sucesso.",
         ["No invoices were generated."] = "Nenhuma invoice foi gerada.",
 
         // Invoice service messages
-        ["No active clients found."] = "Nenhum cliente ativo encontrado.",
+        ["No active monthly clients found."] = "Nenhum cliente mensal ativo encontrado.",
         ["Invoice already exists for {0} in {1}."] = "Já existe invoice para {0} em {1}.",
         ["PDF export failed for {0}: {1}"] = "Falha ao exportar o PDF de {0}: {1}",
         ["Invoice updated. Status changed back to Not Sent."] = "Invoice atualizada. O status voltou para Não enviada.",

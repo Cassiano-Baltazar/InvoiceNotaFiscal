@@ -1,0 +1,180 @@
+@page "/invoices/new"
+@rendermode InteractiveServer
+@inject IInvoiceService InvoiceService
+@inject IClientService ClientService
+@inject ICompanySettingsService CompanySettingsService
+@inject NavigationManager Navigation
+
+<PageTitle>@T("New Invoice")</PageTitle>
+
+<h1>@T("New Invoice")</h1>
+
+<p>@T("Creates one invoice by hand, with the amount of this job. Use it for freelance clients (or an extra invoice for a monthly client).")</p>
+
+@if (!loaded)
+{
+    <p>@T("Loading...")</p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="form-field">
+                <label>@T("Client")</label>
+                <InputSelect @bind-Value="model.ClientId" @bind-Value:after="OnClientChanged" class="input" data-field="client">
+                    <option value="">—</option>
+                    @foreach (var client in clients)
+                    {
+                        <option value="@client.Id">@client.Name (@ClientLabels.BillingTypeLabel(client.BillingType))</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-field">
+                <label>@T("Invoice Date")</label>
+                <InputDate @bind-Value="model.InvoiceDate" @bind-Value:after="OnInvoiceDateChanged" class="input" data-field="invoice-date" />
+            </div>
+            <div class="form-field">
+                <label>@T("Due Date")</label>
+                <InputDate @bind-Value="model.DueDate" class="input" data-field="due-date" />
+            </div>
+            <div class="form-field">
+                <label>@T("Service Year")</label>
+                <InputNumber @bind-Value="model.ServiceYear" class="input" data-field="service-year" />
+            </div>
+            <div class="form-field">
+                <label>@T("Service Month")</label>
+                <InputNumber @bind-Value="model.ServiceMonth" class="input" min="1" max="12" data-field="service-month" />
+            </div>
+            <div class="form-field">
+                <label>@T("Currency")</label>
+                <InputText @bind-Value="model.Currency" class="input" data-field="currency" />
+            </div>
+            <div class="form-field">
+                <label>@T("Currency Label")</label>
+                <InputText @bind-Value="model.CurrencyLabel" class="input" />
+            </div>
+            <div class="form-field full-width">
+                <label>@T("Wise Payment Link")</label>
+                <InputText @bind-Value="model.WisePaymentLink" class="input" />
+            </div>
+        </div>
+
+        <InvoiceItemsEditor Model="model" />
+
+        <div class="form-grid narrow">
+            <div class="form-field">
+                <label>
+                    <InputCheckbox @bind-Value="model.ExportPdf" /> @T("Export PDF to output folder")
+                </label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <p class="message message-error">@error</p>
+        }
+
+        <div class="actions-row">
+            <button class="btn btn-primary" type="submit" disabled="@isSaving">@T("Create Invoice")</button>
+            <a class="btn btn-secondary" href="/invoices">@T("Back to Invoices")</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [SupplyParameterFromQuery] public int? ClientId { get; set; }
+
+    private List<Client> clients = [];
+    private CompanySettings company = new();
+    private InvoiceCreateModel model = new();
+    private bool loaded;
+    private bool isSaving;
+    private string? error;
+    private (string Description, string Unit, decimal UnitPrice) filledItem = (string.Empty, string.Empty, 0m);
+
+    protected override async Task OnInitializedAsync()
+    {
+        company = await CompanySettingsService.GetAsync();
+        // Freelance clients first: they are the ones billed by hand.
+        clients = (await ClientService.GetAllAsync())
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.BillingType == ClientBillingType.Freelance ? 0 : 1)
+            .ThenBy(x => x.Name)
+            .ToList();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        model = new InvoiceCreateModel
+        {
+            InvoiceDate = today,
+            DueDate = today.AddDays(company.PaymentTermsDays),
+            ServiceYear = today.Year,
+            ServiceMonth = today.Month,
+            Items = [new InvoiceItemEditModel { Quantity = 1 }]
+        };
+
+        if (ClientId is int id && clients.Any(x => x.Id == id))
+        {
+            model.ClientId = id;
+            OnClientChanged();
+        }
+
+        loaded = true;
+    }
+
+    private void OnInvoiceDateChanged() =>
+        model.DueDate = model.InvoiceDate.AddDays(company.PaymentTermsDays);
+
+    // Fills what comes from the client. The item is filled only while the user has not changed it.
+    private void OnClientChanged()
+    {
+        var client = clients.FirstOrDefault(x => x.Id == model.ClientId);
+        if (client is null)
+            return;
+
+        model.Currency = client.Currency;
+        model.CurrencyLabel = client.CurrencyLabel;
+        model.WisePaymentLink = client.WisePaymentLink;
+
+        if (model.Items.Count != 1 || (model.Items[0].Description, model.Items[0].Unit, model.Items[0].UnitPrice) != filledItem)
+            return;
+
+        var item = model.Items[0];
+        var isMonthly = client.BillingType == ClientBillingType.Monthly;
+        item.Unit = isMonthly ? "month" : "job";
+        item.UnitPrice = client.MonthlyAmount;
+        item.Description = string.Empty;
+        if (isMonthly)
+        {
+            var serviceMonth = new DateOnly(model.ServiceYear, Math.Clamp(model.ServiceMonth, 1, 12), 1)
+                .ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            item.Description = company.ServiceDescriptionTemplate
+                .Replace("{serviceMonth}", serviceMonth, StringComparison.OrdinalIgnoreCase);
+        }
+        filledItem = (item.Description, item.Unit, item.UnitPrice);
+    }
+
+    private async Task SaveAsync()
+    {
+        isSaving = true;
+        error = null;
+        try
+        {
+            var result = await InvoiceService.CreateAsync(model);
+            if (!result.Success)
+            {
+                error = result.Message;
+                return;
+            }
+
+            var text = string.IsNullOrWhiteSpace(result.Warning) ? result.Message : $"{result.Message} {result.Warning}";
+            Navigation.NavigateTo($"/invoices/{result.InvoiceId}?saved={Uri.EscapeDataString(text)}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

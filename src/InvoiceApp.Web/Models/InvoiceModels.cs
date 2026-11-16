@@ -97,6 +97,15 @@ public class InvoiceEditModel
     };
 }
 
+/// <summary>An invoice created by hand (e.g. a job of a freelance client) instead of by "Generate Month".</summary>
+public class InvoiceCreateModel : InvoiceEditModel
+{
+    public int? ClientId { get; set; }
+    public int ServiceYear { get; set; }
+    public int ServiceMonth { get; set; }
+    public bool ExportPdf { get; set; } = true;
+}
+
 public class InvoiceItemEditModel
 {
     [Required(ErrorMessage = "Item description is required.")]
@@ -121,8 +130,11 @@ public class InvoiceActionResult
     public string Message { get; init; } = string.Empty;
     public string? Warning { get; init; }
 
-    public static InvoiceActionResult Ok(string message, string? warning = null) =>
-        new() { Success = true, Message = message, Warning = warning };
+    /// <summary>The invoice the action created, if any.</summary>
+    public int? InvoiceId { get; init; }
+
+    public static InvoiceActionResult Ok(string message, string? warning = null, int? invoiceId = null) =>
+        new() { Success = true, Message = message, Warning = warning, InvoiceId = invoiceId };
 
     public static InvoiceActionResult Fail(string message) =>
         new() { Success = false, Message = message };

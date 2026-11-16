@@ -13,6 +13,7 @@ public class Client
     public string Country { get; set; } = string.Empty;
     public string Currency { get; set; } = string.Empty;
     public string CurrencyLabel { get; set; } = string.Empty;
+    /// <summary>Amount of the monthly invoice. For a freelance client: optional usual price of a job, used to fill a new invoice.</summary>
     public decimal MonthlyAmount { get; set; }
     public string WisePaymentLink { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
@@ -22,6 +23,9 @@ public class Client
     public string? CountryCode { get; set; }
     public string? TaxId { get; set; }
     public MissingTaxIdReason? MissingTaxIdReason { get; set; }
+
+    /// <summary>Monthly clients go into "Generate Month"; freelance clients are billed per job by hand.</summary>
+    public ClientBillingType BillingType { get; set; } = ClientBillingType.Monthly;
 
     public ICollection<Invoice> Invoices { get; set; } = [];
 }

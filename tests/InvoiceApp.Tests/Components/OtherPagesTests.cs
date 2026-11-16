@@ -75,6 +75,45 @@ public class OtherPagesTests : ComponentTestBase
     }
 
     [Fact]
+    public void Freelance_client_is_saved_and_listed_without_monthly_amount()
+    {
+        var cut = Render<ClientEdit>();
+        Assert.Contains("Monthly Amount", cut.Markup);
+
+        cut.FindAll("input")[0].Change("Jemb Security");
+        cut.Find("[data-field=billing-type]").Change(nameof(ClientBillingType.Freelance));
+        Assert.Contains("Usual Amount per Job (optional)", cut.Markup);
+        Assert.Contains("not included in Generate Month", cut.Markup);
+        cut.Find("[data-field=amount]").Change("440");
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.EndsWith("/clients", Navigation.Uri));
+        using (var db = Database.CreateContext())
+        {
+            var saved = db.Clients.Single();
+            Assert.Equal(ClientBillingType.Freelance, saved.BillingType);
+            Assert.Equal(440m, saved.MonthlyAmount);
+        }
+
+        Database.SeedClient("Monthly Co", amount: 1000m);
+        var list = Render<ClientIndex>();
+        var rows = list.FindAll("tbody tr");
+        Assert.Contains("Freelance (per job)", rows[0].TextContent);
+        Assert.Contains("—", rows[0].TextContent);
+        Assert.DoesNotContain("440", rows[0].TextContent);
+        Assert.Contains("Monthly", rows[1].TextContent);
+        Assert.Contains("1,000.00", rows[1].TextContent);
+    }
+
+    [Fact]
+    public void New_client_is_monthly_by_default()
+    {
+        var cut = Render<ClientEdit>();
+
+        Assert.Equal(nameof(ClientBillingType.Monthly), cut.Find("[data-field=billing-type]").GetAttribute("value"));
+    }
+
+    [Fact]
     public void Client_nfse_fields_are_saved()
     {
         var client = Database.SeedClient("Alpha");

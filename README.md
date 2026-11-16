@@ -9,6 +9,8 @@ Local invoice management system for a small software services company billing fo
 
 - Client management with per-client currency, amount, and Wise payment link
 - Monthly invoice generation
+- Freelance clients (billed per job): set the client's billing type to Freelance; they are left out of
+  "Generate Month" and each invoice is created on Invoices > New Invoice with the amount of that job
 - Invoice list with filters
 - On-screen invoice preview (report)
 - PDF export and save to `Empresa/{YYYY-MM}/PDF/`
