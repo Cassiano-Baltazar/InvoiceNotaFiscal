@@ -47,5 +47,13 @@ public class WithdrawalPageTests : ComponentTestBase
         Assert.Contains("472,38", cut.Find("[data-row=das]").TextContent);
         // 15.487,82 − 472,38 − 477,02 (INSS) = 14.538,42; the accountant is paid from it.
         Assert.Contains("14.281,42", cut.Find("[data-stat=withdrawal]").TextContent);
+        Assert.Equal(4, cut.FindAll("[data-field=history] tbody tr").Count); // November back to August
+
+        // No pró-labore declared: Fator R 0,01 and Anexo V.
+        cut.Find("[data-field=pro-labore-declared]").Change("0");
+        cut.Find("[data-action=save-month]").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Anexo V", cut.Find("[data-field=das-detail]").TextContent));
+        Assert.Contains("declared", cut.Find("[data-row=pro-labore]").TextContent);
     }
 }

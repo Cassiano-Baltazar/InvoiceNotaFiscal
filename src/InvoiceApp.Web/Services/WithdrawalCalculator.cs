@@ -1,8 +1,9 @@
 namespace InvoiceApp.Web.Services;
 
 /// <summary>
-/// Tax rules used to estimate the monthly withdrawal of a Simples Nacional company in Anexo III
-/// (with Fator R) that exports its services. Values are for 2026; review them every year.
+/// Tax rules used to estimate the monthly withdrawal of a Simples Nacional company that exports its
+/// services and is taxed in Anexo III when its Fator R reaches 28%, or in Anexo V when it does not.
+/// Values are for 2026; review them every year.
 /// </summary>
 public static class WithdrawalCalculator
 {
@@ -11,17 +12,31 @@ public static class WithdrawalCalculator
     /// Share of the DAS that is ISS, PIS and COFINS. Exported services do not pay them,
     /// so this part is removed from the rate (LC 123/2006, art. 18, §14).
     /// </param>
-    public sealed record SimplesBracket(int Number, decimal UpTo, decimal NominalRate, decimal Deduction, decimal ExportExcludedShare);
+    public sealed record SimplesBracket(string Anexo, int Number, decimal UpTo, decimal NominalRate, decimal Deduction, decimal ExportExcludedShare);
 
     public static readonly IReadOnlyList<SimplesBracket> AnexoIII =
     [
-        new(1, 180_000m, 6.00m, 0m, 0.4910m),       // ISS 33,50 + COFINS 12,82 + PIS 2,78
-        new(2, 360_000m, 11.20m, 9_360m, 0.4910m),  // ISS 32,00 + COFINS 14,05 + PIS 3,05
-        new(3, 720_000m, 13.50m, 17_640m, 0.4910m), // ISS 32,50 + COFINS 13,64 + PIS 2,96
-        new(4, 1_800_000m, 16.00m, 35_640m, 0.4910m),
-        new(5, 3_600_000m, 21.00m, 125_640m, 0.4910m), // approximate: ISS is capped at 5% in this bracket
-        new(6, 4_800_000m, 33.00m, 648_000m, 0.1950m)  // no ISS in the DAS: COFINS 16,03 + PIS 3,47
+        new("III", 1, 180_000m, 6.00m, 0m, 0.4910m),       // ISS 33,50 + COFINS 12,82 + PIS 2,78
+        new("III", 2, 360_000m, 11.20m, 9_360m, 0.4910m),  // ISS 32,00 + COFINS 14,05 + PIS 3,05
+        new("III", 3, 720_000m, 13.50m, 17_640m, 0.4910m), // ISS 32,50 + COFINS 13,64 + PIS 2,96
+        new("III", 4, 1_800_000m, 16.00m, 35_640m, 0.4910m),
+        new("III", 5, 3_600_000m, 21.00m, 125_640m, 0.4910m), // approximate: ISS is capped at 5% in this bracket
+        new("III", 6, 4_800_000m, 33.00m, 648_000m, 0.1950m)  // no ISS in the DAS: COFINS 16,03 + PIS 3,47
     ];
+
+    /// <summary>Anexo V (LC 123/2006): services subject to Fator R when the payroll is under 28% of the revenue.</summary>
+    public static readonly IReadOnlyList<SimplesBracket> AnexoV =
+    [
+        new("V", 1, 180_000m, 15.50m, 0m, 0.3115m),        // ISS 14,00 + COFINS 14,10 + PIS 3,05
+        new("V", 2, 360_000m, 18.00m, 4_500m, 0.3415m),    // ISS 17,00 + COFINS 14,10 + PIS 3,05
+        new("V", 3, 720_000m, 19.50m, 9_900m, 0.3715m),    // ISS 19,00 + COFINS 14,92 + PIS 3,23
+        new("V", 4, 1_800_000m, 20.50m, 17_100m, 0.4015m), // ISS 21,00 + COFINS 15,74 + PIS 3,41
+        new("V", 5, 3_600_000m, 23.00m, 62_100m, 0.4065m), // ISS 23,50 + COFINS 14,10 + PIS 3,05
+        new("V", 6, 4_800_000m, 30.50m, 540_000m, 0.2000m) // no ISS in the DAS: COFINS 16,44 + PIS 3,56
+    ];
+
+    /// <summary>Minimum Fator R for Anexo III.</summary>
+    public const decimal FatorRThreshold = 0.28m;
 
     /// <summary>INSS ceiling (teto) for 2026.</summary>
     public const decimal InssCeiling = 8_475.55m;
@@ -29,13 +44,16 @@ public static class WithdrawalCalculator
     /// <summary>INSS withheld from the partner's pró-labore (contribuinte individual).</summary>
     public const decimal InssRate = 0.11m;
 
-    public static SimplesBracket BracketFor(decimal rbt12) =>
-        AnexoIII.FirstOrDefault(x => rbt12 <= x.UpTo) ?? AnexoIII[^1];
+    public static SimplesBracket BracketFor(decimal rbt12, bool anexoV = false)
+    {
+        var table = anexoV ? AnexoV : AnexoIII;
+        return table.FirstOrDefault(x => rbt12 <= x.UpTo) ?? table[^1];
+    }
 
     /// <summary>Effective DAS rate (fraction) for exported services, given the revenue of the last 12 months.</summary>
-    public static decimal ExportDasRate(decimal rbt12)
+    public static decimal ExportDasRate(decimal rbt12, bool anexoV = false)
     {
-        var bracket = BracketFor(rbt12);
+        var bracket = BracketFor(rbt12, anexoV);
         var nominal = bracket.NominalRate / 100m;
         var effective = rbt12 <= 0 || bracket.Deduction == 0
             ? nominal
@@ -57,6 +75,18 @@ public static class WithdrawalCalculator
         if (previousMonths.Count < 12)
             return (Math.Round(total / previousMonths.Count * 12, 2), true);
         return (total, false);
+    }
+
+    /// <summary>
+    /// Fator R: payroll (pró-labore declared) over revenue in the months before the month, the same months as
+    /// the RBT12. When there was no revenue before (first month), the month's own payroll and revenue are used.
+    /// It is never below 0,01 (Resolução CGSN 140/2018, art. 26).
+    /// </summary>
+    public static decimal FatorR(decimal previousPayroll, decimal previousRevenue, decimal currentPayroll, decimal currentRevenue)
+    {
+        var (payroll, revenue) = previousRevenue > 0 ? (previousPayroll, previousRevenue) : (currentPayroll, currentRevenue);
+        var ratio = revenue > 0 ? Math.Round(payroll / revenue, 2) : 0m;
+        return Math.Max(0.01m, ratio);
     }
 
     public static decimal Inss(decimal proLabore) =>

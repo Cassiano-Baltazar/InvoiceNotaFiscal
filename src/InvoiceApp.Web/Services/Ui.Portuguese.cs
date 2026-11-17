@@ -403,7 +403,19 @@ public static partial class Ui
         ["Accountant"] = "Contador",
         ["Revenue of the last 12 months (RBT12): {0}"] = "Receita bruta dos últimos 12 meses (RBT12): {0}",
         ["(average since the start × 12)"] = "(média desde o início × 12)",
-        ["Anexo III, bracket {0}, nominal rate {1}%."] = "Anexo III, faixa {0}, alíquota nominal {1}%.",
+        ["Fator R {0}: Anexo {1}, bracket {2}, nominal rate {3}%."] = "Fator R {0}: Anexo {1}, faixa {2}, alíquota nominal {3}%.",
+        ["(−) Pró-labore gross (declared)"] = "(−) Pró-labore bruto (declarado)",
+        ["Pró-labore declared (R$)"] = "Pró-labore declarado (R$)",
+        ["What the accountant declared for the month (0 if none). Empty uses the % in Settings. It decides the Fator R of the next months."] =
+            "O que o contador declarou no mês (0 se não houve). Vazio usa o % das Configurações. Ele define o Fator R dos meses seguintes.",
+        ["Month by month"] = "Mês a mês",
+        ["To compare with the accountant's declarations (PGDAS-D) and guides."] = "Para comparar com as declarações (PGDAS-D) e guias do contador.",
+        ["DAS estimated"] = "DAS estimado",
+        ["* pró-labore not declared yet: the % in Settings is assumed."] = "* pró-labore ainda não informado: usa o % das Configurações.",
+        ["Estimate for a Simples Nacional company with Fator R (Anexo III or V), exporting its services, with 2026 INSS and IRRF tables."] =
+            "Estimativa para empresa do Simples Nacional com Fator R (Anexo III ou V), exportando serviços, com as tabelas de INSS e IRRF de 2026.",
+        ["Fator R is {0} (below 28%): the DAS of this month is in Anexo V. Declare a pró-labore of at least 28% of the revenue to go back to Anexo III."] =
+            "O Fator R é {0} (abaixo de 28%): o DAS deste mês fica no Anexo V. Declare um pró-labore de pelo menos 28% do faturamento para voltar ao Anexo III.",
         ["Without ISS, PIS and COFINS (exported services) the rate is {0} ({1})."] =
             "Sem ISS, PIS e COFINS (serviços exportados) a alíquota é {0} ({1}).",
         ["DAS guide amount (R$)"] = "Valor da guia do DAS (R$)",
@@ -416,8 +428,6 @@ public static partial class Ui
         ["Month saved."] = "Mês salvo.",
         ["Notes of the month"] = "Notas do mês",
         ["No NFS-e issued in this month."] = "Nenhuma NFS-e emitida neste mês.",
-        ["Estimate for a Simples Nacional company in Anexo III with Fator R, exporting its services, with 2026 INSS and IRRF tables."] =
-            "Estimativa para empresa do Simples Nacional no Anexo III com Fator R, exportando serviços, com as tabelas de INSS e IRRF de 2026.",
         ["Confirm the amounts with your accountant."] = "Confirme os valores com o seu contador.",
         ["The pró-labore is below 28% of the revenue: with Fator R under 28% the company moves to Anexo V and the DAS is much higher."] =
             "O pró-labore está abaixo de 28% do faturamento: com Fator R abaixo de 28% a empresa vai para o Anexo V e o DAS fica bem maior.",

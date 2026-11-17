@@ -18,7 +18,12 @@ public static class SchemaUpgrader
         await AddMonthlyWithdrawalAsync(db, cancellationToken);
         await AddLanguageAsync(db, cancellationToken);
         await AddClientBillingTypeAsync(db, cancellationToken);
+        await AddProLaboreDeclaredAsync(db, cancellationToken);
     }
+
+    // v10: pró-labore really declared each month, for the Fator R.
+    private static Task AddProLaboreDeclaredAsync(AppDbContext db, CancellationToken cancellationToken) =>
+        AddColumnAsync(db, "MonthlyTaxRecords", "ProLaboreDeclared", "TEXT NULL", cancellationToken);
 
     // v9: clients billed per job (freelance) besides the monthly ones. Existing clients stay monthly.
     private static Task AddClientBillingTypeAsync(AppDbContext db, CancellationToken cancellationToken) =>
