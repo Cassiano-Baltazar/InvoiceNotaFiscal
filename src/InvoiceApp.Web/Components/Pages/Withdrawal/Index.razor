@@ -50,6 +50,10 @@ else
                     {
                         <tr><td>@T("Other revenue (outside the app)")</td><td>@NfseLabels.Brl(result.OtherRevenue)</td></tr>
                     }
+                    @if (result.DeclaredRevenue is not null)
+                    {
+                        <tr data-row="declared-revenue"><td>@T("Declared in the PGDAS-D (replaces the notes)")</td><td>@NfseLabels.Brl(result.Revenue)</td></tr>
+                    }
                     <tr><td><strong>@T("Revenue")</strong></td><td><strong>@NfseLabels.Brl(result.Revenue)</strong></td></tr>
                     <tr data-row="das"><td>(−) DAS @(result.DasGuideAmount is null ? T("({0}, estimated)", Percent(result.DasRate)) : T("(guide)"))</td><td>@NfseLabels.Brl(result.Das)</td></tr>
                     <tr><td>@T("(−) Accountant")</td><td>@NfseLabels.Brl(result.AccountantFee)</td></tr>
@@ -88,7 +92,7 @@ else
     <h2>DAS</h2>
     <p class="hint" data-field="das-detail">
         @T("Revenue of the last 12 months (RBT12): {0}", NfseLabels.Brl(result.Rbt12))@(result.Rbt12Annualized ? " " + T("(average since the start × 12)") : "").
-        @T("Fator R {0}: Anexo {1}, bracket {2}, nominal rate {3}%.", result.FatorR.ToString("0.00", PtBr), result.Bracket.Anexo, result.Bracket.Number, result.Bracket.NominalRate.ToString("0.00", PtBr))
+        @T("Fator R {0}: Anexo {1}, bracket {2}, nominal rate {3}%.", FatorRText(result.FatorR), result.Bracket.Anexo, result.Bracket.Number, result.Bracket.NominalRate.ToString("0.00", PtBr))
         @T("Without ISS, PIS and COFINS (exported services) the rate is {0} ({1}).", Percent(result.DasRate), NfseLabels.Brl(result.EstimatedDas))
     </p>
 
@@ -102,6 +106,11 @@ else
             <label>@T("Other revenue (R$)")</label>
             <input type="number" step="0.01" class="input" @bind="otherRevenue" data-field="other-revenue" />
             <small>@T("Notes issued outside the app (e.g. on the city hall portal). Fill the earlier months too, so the RBT12 is right.")</small>
+        </div>
+        <div class="form-field">
+            <label>@T("Revenue declared in the PGDAS-D (R$)")</label>
+            <input type="number" step="0.01" class="input" @bind="declaredRevenue" data-field="declared-revenue" />
+            <small>@T("Only when the accountant declared a different revenue than the notes of the month. It replaces them in this month and in the RBT12.")</small>
         </div>
         <div class="form-field">
             <label>@T("Pró-labore declared (R$)")</label>
@@ -141,10 +150,10 @@ else
                 {
                     <tr>
                         <td>@MonthYear(new DateOnly(row.Year, row.Month, 1))</td>
-                        <td>@NfseLabels.Brl(row.Revenue)</td>
+                        <td>@NfseLabels.Brl(row.Revenue)@(row.DeclaredRevenue is null ? "" : " ✓")</td>
                         <td>@NfseLabels.Brl(row.Rbt12)</td>
                         <td>@NfseLabels.Brl(row.ProLaboreGross)@(row.ProLaboreDeclared is null ? " *" : "")</td>
-                        <td>@row.FatorR.ToString("0.00", PtBr)</td>
+                        <td>@FatorRText(row.FatorR)</td>
                         <td>@row.Bracket.Anexo</td>
                         <td>@NfseLabels.Brl(row.EstimatedDas) (@Percent(row.DasRate))</td>
                         <td>@(row.DasGuideAmount is decimal guide ? NfseLabels.Brl(guide) : "—")</td>
@@ -152,7 +161,7 @@ else
                 }
             </tbody>
         </table>
-        <p class="hint">@T("* pró-labore not declared yet: the % in Settings is assumed.")</p>
+        <p class="hint">@T("* pró-labore not declared yet: the % in Settings is assumed.") @T("✓ revenue declared in the PGDAS-D.")</p>
     }
 
     <h2>@T("Notes of the month")</h2>
@@ -192,6 +201,7 @@ else
     private decimal? dasGuideAmount;
     private decimal? otherRevenue;
     private decimal? proLaboreDeclared;
+    private decimal? declaredRevenue;
     private IReadOnlyList<MonthlyWithdrawal> history = [];
     private string? message;
 
@@ -212,16 +222,19 @@ else
         dasGuideAmount = result.DasGuideAmount;
         otherRevenue = result.OtherRevenue > 0 ? result.OtherRevenue : null;
         proLaboreDeclared = result.ProLaboreDeclared;
+        declaredRevenue = result.DeclaredRevenue;
         history = await WithdrawalService.GetHistoryAsync(year, month);
     }
 
     private async Task SaveAsync()
     {
         var (year, month) = Selected();
-        await WithdrawalService.SaveMonthAsync(year, month, otherRevenue ?? 0m, dasGuideAmount, proLaboreDeclared);
+        await WithdrawalService.SaveMonthAsync(year, month, otherRevenue ?? 0m, dasGuideAmount, proLaboreDeclared, declaredRevenue);
         await LoadAsync();
         message = T("Month saved.");
     }
+
+    private static string FatorRText(decimal? fatorR) => fatorR?.ToString("0.00", PtBr) ?? T("not applicable");
 
     private static string Percent(decimal fraction) => (fraction * 100m).ToString("0.00", PtBr) + "%";
 }

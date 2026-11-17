@@ -187,4 +187,33 @@ public class WithdrawalServiceTests : ServiceTestBase
         Assert.Equal([(2026, 11), (2026, 10), (2026, 9), (2026, 8)], history.Select(x => (x.Year, x.Month)).ToList());
         Assert.Equal(21_755.05m, history[1].Revenue);
     }
+
+    [Fact]
+    public async Task Declared_revenue_matches_the_accountants_september_and_october()
+    {
+        // All notes were issued on 08/10/2026, but the accountant declared September and October apart.
+        SeedCompany();
+        SeedNote(2026, 10, 43_244.13m);
+        await CreateService().SaveMonthAsync(2026, 8, 0m, null, 0m);
+        await CreateService().SaveMonthAsync(2026, 9, 0m, 656.28m, 0m, declaredRevenue: 21_489.08m);
+        await CreateService().SaveMonthAsync(2026, 10, 0m, null, 0m, declaredRevenue: 21_755.05m);
+
+        var september = await CreateService().GetMonthAsync(2026, 9);
+        var october = await CreateService().GetMonthAsync(2026, 10);
+
+        // September PGDAS-D: RBT12 0, Fator R not applicable, Anexo III, R$ 656,28.
+        Assert.Equal(21_489.08m, september.Revenue);
+        Assert.Equal(0m, september.Rbt12);
+        Assert.Null(september.FatorR);
+        Assert.False(september.AnexoV);
+        Assert.Equal(656.28m, september.EstimatedDas);
+        Assert.Equal(656.28m, september.DasGuideAmount);
+
+        // October: RBT12p 128.934,48 as in the PGDAS-D, no pró-labore: Anexo V.
+        Assert.Equal(21_755.05m, october.Revenue);
+        Assert.Equal(128_934.48m, october.Rbt12);
+        Assert.Equal(0.01m, october.FatorR);
+        Assert.True(october.AnexoV);
+        Assert.Equal(2_321.64m, october.EstimatedDas);
+    }
 }

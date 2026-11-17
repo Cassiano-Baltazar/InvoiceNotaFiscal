@@ -26,7 +26,14 @@ public class WithdrawalCalculatorTests
     public void Rbt12_in_the_first_month_is_the_month_times_12()
     {
         Assert.Equal((180_000m, true), WithdrawalCalculator.Rbt12([], 15_000m));
-        Assert.Equal((180_000m, true), WithdrawalCalculator.Rbt12([0m], 15_000m));
+    }
+
+    [Fact]
+    public void Rbt12_after_months_without_revenue_is_zero()
+    {
+        // PGDAS-D 09/2026: second month, August without revenue: RBT12p 0,00 and bracket 1.
+        Assert.Equal((0m, true), WithdrawalCalculator.Rbt12([0m], 21_489.08m));
+        Assert.Equal(656.28m, Math.Round(21_489.08m * WithdrawalCalculator.ExportDasRate(0m), 2));
     }
 
     [Fact]
@@ -77,11 +84,18 @@ public class WithdrawalCalculatorTests
     }
 
     [Theory]
-    [InlineData(0, 21_489.08, 0, 21_755.05, 0.01)]       // no pró-labore declared: minimum 0,01
-    [InlineData(6_017, 21_489.08, 0, 21_755.05, 0.28)]   // months before decide
-    [InlineData(0, 0, 4_336.59, 15_487.82, 0.28)]        // first month: the month itself
-    public void Fator_r_is_payroll_over_revenue(decimal previousPayroll, decimal previousRevenue, decimal payroll, decimal revenue, decimal expected)
+    [InlineData(0, 21_489.08, 0, 21_755.05, false, 0.01)]     // no pró-labore declared: minimum 0,01
+    [InlineData(6_017, 21_489.08, 0, 21_755.05, false, 0.28)] // months before decide
+    [InlineData(0, 0, 4_336.59, 15_487.82, true, 0.28)]       // first month: the month itself
+    public void Fator_r_is_payroll_over_revenue(decimal previousPayroll, decimal previousRevenue, decimal payroll, decimal revenue, bool firstMonth, decimal expected)
     {
-        Assert.Equal(expected, WithdrawalCalculator.FatorR(previousPayroll, previousRevenue, payroll, revenue));
+        Assert.Equal(expected, WithdrawalCalculator.FatorR(previousPayroll, previousRevenue, payroll, revenue, firstMonth));
+    }
+
+    [Fact]
+    public void Fator_r_does_not_apply_without_revenue_before()
+    {
+        // PGDAS-D 09/2026: "Fator r = Não se aplica", taxed in Anexo III.
+        Assert.Null(WithdrawalCalculator.FatorR(0m, 0m, 0m, 21_489.08m, firstMonth: false));
     }
 }

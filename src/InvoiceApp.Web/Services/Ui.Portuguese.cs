@@ -409,6 +409,12 @@ public static partial class Ui
         ["What the accountant declared for the month (0 if none). Empty uses the % in Settings. It decides the Fator R of the next months."] =
             "O que o contador declarou no mês (0 se não houve). Vazio usa o % das Configurações. Ele define o Fator R dos meses seguintes.",
         ["Month by month"] = "Mês a mês",
+        ["Declared in the PGDAS-D (replaces the notes)"] = "Declarado no PGDAS-D (substitui as notas)",
+        ["Revenue declared in the PGDAS-D (R$)"] = "Faturamento declarado no PGDAS-D (R$)",
+        ["Only when the accountant declared a different revenue than the notes of the month. It replaces them in this month and in the RBT12."] =
+            "Só quando o contador declarou um faturamento diferente das notas do mês. Ele as substitui neste mês e no RBT12.",
+        ["✓ revenue declared in the PGDAS-D."] = "✓ faturamento declarado no PGDAS-D.",
+        ["not applicable"] = "não se aplica",
         ["To compare with the accountant's declarations (PGDAS-D) and guides."] = "Para comparar com as declarações (PGDAS-D) e guias do contador.",
         ["DAS estimated"] = "DAS estimado",
         ["* pró-labore not declared yet: the % in Settings is assumed."] = "* pró-labore ainda não informado: usa o % das Configurações.",

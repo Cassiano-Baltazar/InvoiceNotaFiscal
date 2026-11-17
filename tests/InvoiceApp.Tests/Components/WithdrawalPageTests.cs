@@ -35,9 +35,9 @@ public class WithdrawalPageTests : ComponentTestBase
         var cut = Render<WithdrawalIndex>();
         cut.Find("[data-field=month]").Change("2026-11");
 
-        // First month with revenue: RBT12 = 15.487,82 × 12, bracket 2.
+        // August to October without revenue: RBT12 0, bracket 1, Fator R not applicable (as in the PGDAS-D).
         cut.WaitForAssertion(() => Assert.Contains("15.487,82", cut.Find("[data-stat=revenue]").TextContent));
-        Assert.Contains("Anexo III, bracket 2", cut.Find("[data-field=das-detail]").TextContent);
+        Assert.Contains("Fator R not applicable: Anexo III, bracket 1", cut.Find("[data-field=das-detail]").TextContent);
         Assert.Contains("estimated", cut.Find("[data-row=das]").TextContent);
 
         cut.Find("[data-field=das-guide]").Change("472.38");
@@ -49,11 +49,13 @@ public class WithdrawalPageTests : ComponentTestBase
         Assert.Contains("14.281,42", cut.Find("[data-stat=withdrawal]").TextContent);
         Assert.Equal(4, cut.FindAll("[data-field=history] tbody tr").Count); // November back to August
 
-        // No pró-labore declared: Fator R 0,01 and Anexo V.
+        // Pró-labore and revenue as declared by the accountant replace the % and the notes.
         cut.Find("[data-field=pro-labore-declared]").Change("0");
+        cut.Find("[data-field=declared-revenue]").Change("20000");
         cut.Find("[data-action=save-month]").Click();
 
-        cut.WaitForAssertion(() => Assert.Contains("Anexo V", cut.Find("[data-field=das-detail]").TextContent));
+        cut.WaitForAssertion(() => Assert.Contains("20.000,00", cut.Find("[data-stat=revenue]").TextContent));
         Assert.Contains("declared", cut.Find("[data-row=pro-labore]").TextContent);
+        Assert.Contains("PGDAS-D", cut.Find("[data-row=declared-revenue]").TextContent);
     }
 }

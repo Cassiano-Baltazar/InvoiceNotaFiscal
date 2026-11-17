@@ -15,4 +15,7 @@ public class MonthlyTaxRecord
 
     /// <summary>Pró-labore declared for the month (0 when none was). Empty means the % set in Settings.</summary>
     public decimal? ProLaboreDeclared { get; set; }
+
+    /// <summary>Revenue the accountant declared in the PGDAS-D for the month. Empty uses the notes.</summary>
+    public decimal? DeclaredRevenue { get; set; }
 }
