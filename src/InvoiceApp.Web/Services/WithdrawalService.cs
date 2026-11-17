@@ -14,12 +14,15 @@ public sealed record MonthlyWithdrawal
     public required IReadOnlyList<Nfse> Notes { get; init; }
     public required decimal NotesRevenue { get; init; }
     public required decimal OtherRevenue { get; init; }
-    public decimal Revenue => NotesRevenue + OtherRevenue;
+    /// <summary>Revenue declared in the PGDAS-D for the month, when entered; it replaces the notes.</summary>
+    public required decimal? DeclaredRevenue { get; init; }
+    public decimal Revenue => DeclaredRevenue ?? NotesRevenue + OtherRevenue;
 
     // DAS
     public required decimal Rbt12 { get; init; }
     public required bool Rbt12Annualized { get; init; }
-    public required decimal FatorR { get; init; }
+    /// <summary>Null when it does not apply (no revenue in the months before).</summary>
+    public required decimal? FatorR { get; init; }
     public bool AnexoV => Bracket.Anexo == "V";
     public required WithdrawalCalculator.SimplesBracket Bracket { get; init; }
     public required decimal DasRate { get; init; }
@@ -54,7 +57,7 @@ public interface IWithdrawalService
 {
     Task<MonthlyWithdrawal> GetMonthAsync(int year, int month, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MonthlyWithdrawal>> GetHistoryAsync(int year, int month, CancellationToken cancellationToken = default);
-    Task SaveMonthAsync(int year, int month, decimal otherRevenue, decimal? dasGuideAmount, decimal? proLaboreDeclared = null, CancellationToken cancellationToken = default);
+    Task SaveMonthAsync(int year, int month, decimal otherRevenue, decimal? dasGuideAmount, decimal? proLaboreDeclared = null, decimal? declaredRevenue = null, CancellationToken cancellationToken = default);
 }
 
 public class WithdrawalService(AppDbContext db, ICompanySettingsService settingsService) : IWithdrawalService
@@ -86,7 +89,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
 
         MonthlyTaxRecord? RecordOf(DateOnly m) => records.FirstOrDefault(x => x.Year == m.Year && x.Month == m.Month);
         decimal NotesIn(DateOnly m) => issued.Where(x => x.Month == m).Sum(x => x.Note.AmountBrl - x.Note.Discount);
-        decimal RevenueIn(DateOnly m) => NotesIn(m) + (RecordOf(m)?.OtherRevenueBrl ?? 0m);
+        decimal RevenueIn(DateOnly m) => RecordOf(m)?.DeclaredRevenue ?? NotesIn(m) + (RecordOf(m)?.OtherRevenueBrl ?? 0m);
         // Without a declared amount, the pró-labore is the % set in Settings.
         decimal PayrollIn(DateOnly m) => RecordOf(m)?.ProLaboreDeclared ?? Math.Round(RevenueIn(m) * settings.ProLaboreRate / 100m, 2);
 
@@ -94,7 +97,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
         var notes = issued.Where(x => x.Month == monthStart).Select(x => x.Note).ToList();
         var notesRevenue = NotesIn(monthStart);
         var otherRevenue = record?.OtherRevenueBrl ?? 0m;
-        var revenue = notesRevenue + otherRevenue;
+        var revenue = RevenueIn(monthStart);
 
         // Months before this one that count for the RBT12 and the Fator R: the last 12, but not before the
         // company started. Without a start date, the first month with revenue is taken as the start.
@@ -110,7 +113,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
 
         var proLaboreGross = PayrollIn(monthStart);
         var fatorR = WithdrawalCalculator.FatorR(
-            previousMonths.Sum(PayrollIn), previousMonths.Sum(RevenueIn), proLaboreGross, revenue);
+            previousMonths.Sum(PayrollIn), previousMonths.Sum(RevenueIn), proLaboreGross, revenue, firstMonth: previousMonths.Count == 0);
         var anexoV = fatorR < WithdrawalCalculator.FatorRThreshold;
         var bracket = WithdrawalCalculator.BracketFor(rbt12, anexoV);
         var dasRate = WithdrawalCalculator.ExportDasRate(rbt12, anexoV);
@@ -122,7 +125,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
         var warnings = new List<string>();
         if (anexoV && revenue > 0)
             warnings.Add(T("Fator R is {0} (below 28%): the DAS of this month is in Anexo V. Declare a pró-labore of at least 28% of the revenue to go back to Anexo III.",
-                fatorR.ToString("0.00", PtBr)));
+                fatorR!.Value.ToString("0.00", PtBr)));
         else if (settings.ProLaboreRate < 28m && record?.ProLaboreDeclared is null)
             warnings.Add(T("The pró-labore is below 28% of the revenue: with Fator R under 28% the company moves to Anexo V and the DAS is much higher."));
         if (settings.CompanyStartDate is null)
@@ -139,6 +142,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
             Notes = notes,
             NotesRevenue = notesRevenue,
             OtherRevenue = otherRevenue,
+            DeclaredRevenue = record?.DeclaredRevenue,
             Rbt12 = rbt12,
             Rbt12Annualized = annualized,
             FatorR = fatorR,
@@ -185,7 +189,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
     private static DateOnly RevenueMonth(Nfse note) =>
         new(note.IssuedAt!.Value.Year, note.IssuedAt.Value.Month, 1);
 
-    public async Task SaveMonthAsync(int year, int month, decimal otherRevenue, decimal? dasGuideAmount, decimal? proLaboreDeclared = null, CancellationToken cancellationToken = default)
+    public async Task SaveMonthAsync(int year, int month, decimal otherRevenue, decimal? dasGuideAmount, decimal? proLaboreDeclared = null, decimal? declaredRevenue = null, CancellationToken cancellationToken = default)
     {
         var record = await db.MonthlyTaxRecords.FirstOrDefaultAsync(x => x.Year == year && x.Month == month, cancellationToken);
         if (record is null)
@@ -197,6 +201,7 @@ public class WithdrawalService(AppDbContext db, ICompanySettingsService settings
         record.OtherRevenueBrl = Math.Max(0m, otherRevenue);
         record.DasGuideAmount = dasGuideAmount is > 0 ? dasGuideAmount : null;
         record.ProLaboreDeclared = proLaboreDeclared is decimal declared ? Math.Max(0m, declared) : null;
+        record.DeclaredRevenue = declaredRevenue is decimal revenue ? Math.Max(0m, revenue) : null;
         await db.SaveChangesAsync(cancellationToken);
     }
 

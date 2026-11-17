@@ -63,15 +63,16 @@ public static class WithdrawalCalculator
 
     /// <summary>
     /// RBT12: revenue of the 12 months before the month. While the company has less than 12 months,
-    /// it is the average of the months since the start times 12; in the first month (or when there was
-    /// no revenue before), it is the month's own revenue times 12 (LC 123/2006, art. 18, §§ 2 and 3).
+    /// it is the average of the months since the start times 12, even when that is zero; only in the
+    /// company's first month it is the month's own revenue times 12 (LC 123/2006, art. 18, §§ 2 and 3).
+    /// The September 2026 PGDAS-D (second month, August without revenue) used RBT12 0 and bracket 1.
     /// </summary>
     /// <param name="previousMonths">Revenue of each month before the month, oldest first, at most 12, starting at the company's start month when it is more recent.</param>
     public static (decimal Rbt12, bool Annualized) Rbt12(IReadOnlyList<decimal> previousMonths, decimal currentMonth)
     {
-        var total = previousMonths.Sum();
-        if (total <= 0)
+        if (previousMonths.Count == 0)
             return (currentMonth * 12, true);
+        var total = previousMonths.Sum();
         if (previousMonths.Count < 12)
             return (Math.Round(total / previousMonths.Count * 12, 2), true);
         return (total, false);
@@ -79,14 +80,16 @@ public static class WithdrawalCalculator
 
     /// <summary>
     /// Fator R: payroll (pró-labore declared) over revenue in the months before the month, the same months as
-    /// the RBT12. When there was no revenue before (first month), the month's own payroll and revenue are used.
-    /// It is never below 0,01 (Resolução CGSN 140/2018, art. 26).
+    /// the RBT12; in the company's first month, the month's own payroll and revenue. It is never below 0,01
+    /// (Resolução CGSN 140/2018, art. 26). Null when it does not apply: no revenue in the months before, as in
+    /// the September 2026 PGDAS-D ("Fator r = Não se aplica"), which was taxed in Anexo III.
     /// </summary>
-    public static decimal FatorR(decimal previousPayroll, decimal previousRevenue, decimal currentPayroll, decimal currentRevenue)
+    public static decimal? FatorR(decimal previousPayroll, decimal previousRevenue, decimal currentPayroll, decimal currentRevenue, bool firstMonth)
     {
-        var (payroll, revenue) = previousRevenue > 0 ? (previousPayroll, previousRevenue) : (currentPayroll, currentRevenue);
-        var ratio = revenue > 0 ? Math.Round(payroll / revenue, 2) : 0m;
-        return Math.Max(0.01m, ratio);
+        var (payroll, revenue) = firstMonth ? (currentPayroll, currentRevenue) : (previousPayroll, previousRevenue);
+        if (revenue <= 0)
+            return null;
+        return Math.Max(0.01m, Math.Round(payroll / revenue, 2));
     }
 
     public static decimal Inss(decimal proLabore) =>

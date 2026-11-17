@@ -19,7 +19,12 @@ public static class SchemaUpgrader
         await AddLanguageAsync(db, cancellationToken);
         await AddClientBillingTypeAsync(db, cancellationToken);
         await AddProLaboreDeclaredAsync(db, cancellationToken);
+        await AddDeclaredRevenueAsync(db, cancellationToken);
     }
+
+    // v11: revenue declared in the PGDAS-D, when it differs from the notes of the month.
+    private static Task AddDeclaredRevenueAsync(AppDbContext db, CancellationToken cancellationToken) =>
+        AddColumnAsync(db, "MonthlyTaxRecords", "DeclaredRevenue", "TEXT NULL", cancellationToken);
 
     // v10: pró-labore really declared each month, for the Fator R.
     private static Task AddProLaboreDeclaredAsync(AppDbContext db, CancellationToken cancellationToken) =>
