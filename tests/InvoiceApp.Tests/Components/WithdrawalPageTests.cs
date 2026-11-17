@@ -57,5 +57,28 @@ public class WithdrawalPageTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.Contains("20.000,00", cut.Find("[data-stat=revenue]").TextContent));
         Assert.Contains("declared", cut.Find("[data-row=pro-labore]").TextContent);
         Assert.Contains("PGDAS-D", cut.Find("[data-row=declared-revenue]").TextContent);
+        }
+
+    [Fact]
+    public void Moves_between_months_and_shows_amounts_with_two_decimals()
+    {
+        Database.SeedCompany(x => x.CompanyStartDate = new DateOnly(2026, 8, 25));
+        using (var db = Database.CreateContext())
+        {
+            db.MonthlyTaxRecords.Add(new MonthlyTaxRecord { Year = 2026, Month = 10, ProLaboreDeclared = 7000.0m, DeclaredRevenue = 43_244.13m });
+            db.SaveChanges();
+        }
+
+        var cut = Render<WithdrawalIndex>();
+        cut.Find("[data-field=month]").Change("2026-11");
+        cut.Find("[data-action=previous-month]").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("2026-10", cut.Find("[data-field=month]").GetAttribute("value")));
+        Assert.Equal("7000.00", cut.Find("[data-field=pro-labore-declared]").GetAttribute("value"));
+        Assert.Equal("43244.13", cut.Find("[data-field=declared-revenue]").GetAttribute("value"));
+
+        cut.Find("[data-action=next-month]").Click();
+        cut.Find("[data-action=next-month]").Click();
+        cut.WaitForAssertion(() => Assert.Equal("2026-12", cut.Find("[data-field=month]").GetAttribute("value")));
     }
 }

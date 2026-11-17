@@ -10,7 +10,11 @@
     <h1>@T("Monthly Withdrawal")</h1>
     <div class="form-field">
         <label>@T("Month")</label>
-        <input type="month" class="input" @bind="selectedMonth" @bind:after="LoadAsync" data-field="month" />
+        <div class="month-nav">
+            <button type="button" class="btn btn-secondary" title="@T("Previous month")" aria-label="@T("Previous month")" @onclick="() => MoveMonthAsync(-1)" data-action="previous-month">&lt;</button>
+            <input type="month" class="input" @bind="selectedMonth" @bind:after="LoadAsync" data-field="month" />
+            <button type="button" class="btn btn-secondary" title="@T("Next month")" aria-label="@T("Next month")" @onclick="() => MoveMonthAsync(1)" data-action="next-month">&gt;</button>
+        </div>
     </div>
 </div>
 
@@ -219,12 +223,22 @@ else
         message = null;
         var (year, month) = Selected();
         result = await WithdrawalService.GetMonthAsync(year, month);
-        dasGuideAmount = result.DasGuideAmount;
-        otherRevenue = result.OtherRevenue > 0 ? result.OtherRevenue : null;
-        proLaboreDeclared = result.ProLaboreDeclared;
-        declaredRevenue = result.DeclaredRevenue;
+        dasGuideAmount = TwoDecimals(result.DasGuideAmount);
+        otherRevenue = result.OtherRevenue > 0 ? TwoDecimals(result.OtherRevenue) : null;
+        proLaboreDeclared = TwoDecimals(result.ProLaboreDeclared);
+        declaredRevenue = TwoDecimals(result.DeclaredRevenue);
         history = await WithdrawalService.GetHistoryAsync(year, month);
     }
+
+    private Task MoveMonthAsync(int months)
+    {
+        selectedMonth = selectedMonth.AddMonths(months);
+        return LoadAsync();
+    }
+
+    /// <summary>Shows amounts in the fields with two decimals (7000.00, not 7000.0).</summary>
+    private static decimal? TwoDecimals(decimal? value) =>
+        value is decimal amount ? Math.Round(amount, 2) + 0.00m : null;
 
     private async Task SaveAsync()
     {
