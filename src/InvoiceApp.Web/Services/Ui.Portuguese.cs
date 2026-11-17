@@ -31,6 +31,8 @@ public static partial class Ui
         ["Loading..."] = "Carregando...",
         ["Save"] = "Salvar",
         ["Cancel"] = "Cancelar",
+        ["Previous month"] = "Mês anterior",
+        ["Next month"] = "Próximo mês",
         ["Back"] = "Voltar",
         ["Edit"] = "Editar",
         ["View"] = "Ver",

@@ -470,3 +470,13 @@ select.input {
     margin: 0;
     overflow-wrap: anywhere;
 }
+
+.month-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.month-nav > .btn {
+    padding: 8px 12px;
+}
