@@ -122,10 +122,26 @@ Requirements on the target machine:
 
 No .NET installation required (self-contained publish).
 
+## Pró-labore calculator for the accountant (.exe)
+
+`src/CalculoProLabore` is a small Windows program, in Portuguese, with the same rules as the
+Monthly Withdrawal tab (`Services/WithdrawalCalculator.cs`, linked into it) but without the
+database or the certificate. The accountant types the month's revenue and sees the DAS
+(Anexo III or V, with the export reduction), the pró-labore with INSS and IRRF, the profit to
+distribute and the total withdrawal. RBT12, Fator R, % of pró-labore (28%) and the accountant's
+fee are optional fields; the last values are kept in `%APPDATA%\CalculoProLabore`.
+
+```powershell
+dotnet publish src/CalculoProLabore/CalculoProLabore.csproj -c Release -o dist-calculo
+```
+
+This gives one self-contained `dist-calculo/CalculoProLabore.exe` (Windows 64-bit, no .NET
+needed). The Build workflow also publishes it as the `CalculoProLabore-win-x64` artifact.
+
 ## Continuous integration
 
 - **Tests** (`.github/workflows/tests.yml`): runs `dotnet test` on every push to `main` and on pull requests.
-- **Build** (`.github/workflows/build.yml`): builds the solution on Windows and publishes `InvoiceApp.exe` as a downloadable artifact.
+- **Build** (`.github/workflows/build.yml`): builds the solution on Windows and publishes `InvoiceApp.exe` and `CalculoProLabore.exe` as downloadable artifacts.
 
 ## Database
 

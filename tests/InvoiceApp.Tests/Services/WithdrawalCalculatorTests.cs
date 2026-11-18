@@ -98,4 +98,57 @@ public class WithdrawalCalculatorTests
         // PGDAS-D 09/2026: "Fator r = Não se aplica", taxed in Anexo III.
         Assert.Null(WithdrawalCalculator.FatorR(0m, 0m, 0m, 21_489.08m, firstMonth: false));
     }
+
+    [Fact]
+    public void Summarize_september_2026_matches_the_pgdas()
+    {
+        // PGDAS-D 09/2026: revenue 21.489,08, RBT12 0, Anexo III bracket 1, DAS 656,28.
+        var month = WithdrawalCalculator.Summarize(21_489.08m, rbt12: 0m, fatorR: null, proLaboreRate: 28m, accountantFee: 257m);
+
+        Assert.Equal("III", month.Bracket.Anexo);
+        Assert.Equal(1, month.Bracket.Number);
+        Assert.Equal(656.28m, month.Das);
+        Assert.Equal(6_016.94m, month.ProLaboreGross);
+        Assert.Equal(661.86m, month.Inss);
+        Assert.Equal(WithdrawalCalculator.Irrf(6_016.94m, 661.86m), month.Irrf);
+        Assert.Equal(21_489.08m - 656.28m - 257m - 6_016.94m, month.Profit);
+        Assert.Equal(month.ProLaboreNet + month.Profit, month.TotalWithdrawal);
+        Assert.Equal(656.28m + month.Inss + month.Irrf, month.TaxReserve);
+    }
+
+    [Fact]
+    public void Summarize_without_rbt12_annualizes_the_month()
+    {
+        var month = WithdrawalCalculator.Summarize(10_000m, rbt12: null, fatorR: null, proLaboreRate: 28m, accountantFee: 0m);
+
+        Assert.True(month.Rbt12FromRevenue);
+        Assert.Equal(120_000m, month.Rbt12);
+        Assert.Equal(305.40m, month.Das);
+    }
+
+    [Fact]
+    public void Summarize_uses_anexo_v_when_fator_r_is_below_28_percent()
+    {
+        var month = WithdrawalCalculator.Summarize(10_000m, rbt12: 120_000m, fatorR: 0.10m, proLaboreRate: 28m, accountantFee: 0m);
+
+        Assert.True(month.AnexoV);
+        Assert.Equal(Math.Round(10_000m * 0.155m * (1 - 0.3115m), 2), month.Das);
+    }
+
+    [Fact]
+    public void Summarize_services_in_brazil_pay_the_whole_rate()
+    {
+        var month = WithdrawalCalculator.Summarize(10_000m, rbt12: 120_000m, fatorR: null, proLaboreRate: 28m, accountantFee: 0m, export: false);
+
+        Assert.Equal(600m, month.Das);
+    }
+
+    [Fact]
+    public void Summarize_never_has_a_negative_withdrawal_from_profit()
+    {
+        var month = WithdrawalCalculator.Summarize(300m, rbt12: null, fatorR: null, proLaboreRate: 28m, accountantFee: 257m);
+
+        Assert.True(month.Profit < 0);
+        Assert.Equal(month.ProLaboreNet, month.TotalWithdrawal);
+    }
 }

@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/CalculoProLabore/CalculoProLabore.csproj" />
     <Project Path="src/InvoiceApp.Web/InvoiceApp.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">

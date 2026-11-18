@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Standalone calculator for the accountant: types the month's revenue and sees the pró-labore,
+       DAS, INSS/IRRF and the profit to distribute. Uses the same rules as the Monthly Withdrawal tab. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>CalculoProLabore</AssemblyName>
+    <RootNamespace>CalculoProLabore</RootNamespace>
+    <Product>Cálculo de Pró-labore</Product>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same tax rules as the InvoiceApp, without its database or certificate. -->
+    <Compile Include="..\InvoiceApp.Web\Services\WithdrawalCalculator.cs" Link="Shared\WithdrawalCalculator.cs" />
+  </ItemGroup>
+
+</Project>
