@@ -4,18 +4,23 @@ using InvoiceApp.Web.Services;
 namespace CalculoProLabore;
 
 /// <summary>
-/// One window: the accountant types the month's revenue and sees the DAS, the pró-labore with its
-/// INSS and IRRF, and the profit that can be distributed. The optional parameters below the revenue
-/// (RBT12, Fator R, % of pró-labore, fee) only need changing when the month is not the usual one.
+/// One window laid out like the Monthly Withdrawal tab of the InvoiceApp: the inputs on top
+/// (revenue and RBT12 first), three summary cards, and the grids "Cálculo", "Pró-labore" and
+/// "Para onde vai o dinheiro", followed by the DAS explanation.
 /// </summary>
 internal sealed class MainForm : Form
 {
-    private static readonly Font BaseFont = new("Segoe UI", 10f);
-    private static readonly Font BoldFont = new("Segoe UI", 10f, FontStyle.Bold);
-    private static readonly Font TitleFont = new("Segoe UI", 11f, FontStyle.Bold);
-    private static readonly Font BigFont = new("Segoe UI", 16f, FontStyle.Bold);
-    private static readonly Color Accent = Color.FromArgb(0, 92, 153);
-    private static readonly Color Muted = Color.FromArgb(96, 96, 96);
+    private static readonly Font BaseFont = new("Segoe UI", 9.75f);
+    private static readonly Font BoldFont = new("Segoe UI", 9.75f, FontStyle.Bold);
+    private static readonly Font SmallFont = new("Segoe UI", 8.25f);
+    private static readonly Font SectionFont = new("Segoe UI", 13f, FontStyle.Bold);
+    private static readonly Font PageTitleFont = new("Segoe UI", 18f, FontStyle.Bold);
+    private static readonly Font CardValueFont = new("Segoe UI", 16f, FontStyle.Bold);
+    private static readonly Font InputBigFont = new("Segoe UI", 12f, FontStyle.Bold);
+    private static readonly Color PageBack = Color.FromArgb(243, 244, 246);
+    private static readonly Color Border = Color.FromArgb(220, 222, 226);
+    private static readonly Color Accent = Color.FromArgb(37, 99, 235);
+    private static readonly Color Muted = Color.FromArgb(100, 100, 100);
     private static readonly Color Warning = Color.FromArgb(160, 82, 0);
 
     private readonly Preferences _preferences = Preferences.Load();
@@ -25,35 +30,37 @@ internal sealed class MainForm : Form
         Format = DateTimePickerFormat.Custom,
         CustomFormat = "MM/yyyy",
         ShowUpDown = true,
-        Width = 110
+        Width = 100
     };
-    private readonly TextBox _revenue = NewInput(BigFont, 220);
-    private readonly TextBox _rbt12 = NewInput(BaseFont, 160);
-    private readonly TextBox _fatorR = NewInput(BaseFont, 80);
-    private readonly TextBox _proLaboreRate = NewInput(BaseFont, 80);
-    private readonly TextBox _accountantFee = NewInput(BaseFont, 120);
+    private readonly TextBox _revenue = NewInput(InputBigFont);
+    private readonly TextBox _rbt12 = NewInput(InputBigFont);
+    private readonly TextBox _fatorR = NewInput(BaseFont);
+    private readonly TextBox _proLaboreRate = NewInput(BaseFont);
+    private readonly TextBox _accountantFee = NewInput(BaseFont);
     private readonly CheckBox _export = new()
     {
         Text = "Exportação de serviços (sem ISS, PIS e COFINS no DAS)",
         AutoSize = true,
-        Font = BaseFont
+        Font = BaseFont,
+        Margin = new Padding(0, 6, 0, 0)
     };
 
-    private readonly TableLayoutPanel _results = new()
-    {
-        ColumnCount = 2,
-        AutoSize = true,
-        Dock = DockStyle.Top,
-        Padding = new Padding(0, 0, 8, 0)
-    };
+    private readonly Label _cardWithdrawal = CardValue();
+    private readonly Label _cardTaxesCaption = CardCaption("Reservar para impostos");
+    private readonly Label _cardTaxes = CardValue();
+    private readonly Label _cardRevenue = CardValue();
+
+    private readonly TableLayoutPanel _gridCalculation = NewGrid();
+    private readonly TableLayoutPanel _gridProLabore = NewGrid();
+    private readonly TableLayoutPanel _gridMoney = NewGrid();
+    private readonly Label _payrollNote = Note("");
+    private readonly Label _dasText = Note("");
     private readonly Label _warnings = new()
     {
         AutoSize = true,
-        MaximumSize = new Size(440, 0),
         ForeColor = Warning,
         Font = BaseFont,
-        Dock = DockStyle.Top,
-        Padding = new Padding(0, 12, 0, 0)
+        Margin = new Padding(0, 10, 0, 0)
     };
 
     private WithdrawalCalculator.MonthSummary? _summary;
@@ -62,11 +69,11 @@ internal sealed class MainForm : Form
     {
         Text = "Cálculo de Pró-labore e Retirada Mensal — Simples Nacional";
         Font = BaseFont;
-        BackColor = Color.White;
+        BackColor = PageBack;
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(980, 680);
-        MinimumSize = new Size(900, 600);
+        ClientSize = new Size(1280, 760);
+        MinimumSize = new Size(1000, 640);
 
         _month.Value = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         _revenue.Text = _preferences.Revenue;
@@ -79,19 +86,39 @@ internal sealed class MainForm : Form
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            Padding = new Padding(20)
+            ColumnCount = 3,
+            AutoScroll = true,
+            Padding = new Padding(20, 14, 20, 20),
+            BackColor = PageBack
         };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        root.Controls.Add(BuildInputs(), 0, 0);
-        root.Controls.Add(BuildResultsPanel(), 1, 0);
+        for (var i = 0; i < 3; i++)
+            root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+
+        AddSpanning(root, BuildHeader());
+        AddSpanning(root, BuildInputs());
+
+        AddRow(root,
+            Card(CardCaption("Você pode retirar"), _cardWithdrawal),
+            Card(_cardTaxesCaption, _cardTaxes),
+            Card(CardCaption("Faturamento do mês"), _cardRevenue));
+        AddRow(root, Section("Cálculo"), Section("Pró-labore"), Section("Para onde vai o dinheiro"));
+        AddRow(root, _gridCalculation, WithNote(_gridProLabore, _payrollNote), _gridMoney);
+
+        AddSpanning(root, Section("DAS"));
+        _dasText.MaximumSize = new Size(1200, 0);
+        AddSpanning(root, _dasText);
+        _warnings.MaximumSize = new Size(1200, 0);
+        AddSpanning(root, _warnings);
+        AddSpanning(root, Note(
+            "Tabelas de 2026: Simples Nacional (Anexos III e V), INSS 11% até o teto de R$ 8.475,55 e IRRF com a redução da " +
+            "Lei 15.270/2025. Valores estimados: confira sempre com o PGDAS-D.", top: 16));
+
         Controls.Add(root);
 
         foreach (var box in new[] { _revenue, _rbt12, _fatorR, _proLaboreRate, _accountantFee })
         {
             box.TextChanged += (_, _) => Recalculate();
-            box.Leave += (_, _) => Reformat((TextBox)box);
+            box.Leave += (_, _) => Reformat(box);
         }
         _export.CheckedChanged += (_, _) => Recalculate();
         _month.ValueChanged += (_, _) => Recalculate();
@@ -101,120 +128,223 @@ internal sealed class MainForm : Form
         Recalculate();
     }
 
+    // ---------- layout ----------
+
+    private Control BuildHeader()
+    {
+        var header = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 8) };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        header.Controls.Add(new Label { Text = "Retirada mensal", Font = PageTitleFont, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
+
+        var month = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, Anchor = AnchorStyles.Right, WrapContents = false };
+        month.Controls.Add(new Label { Text = "Mês", AutoSize = true, Margin = new Padding(0) });
+        month.Controls.Add(_month);
+        header.Controls.Add(month, 1, 0);
+        return header;
+    }
+
     private Control BuildInputs()
     {
-        var panel = new FlowLayoutPanel
+        var card = new Panel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoScroll = true,
-            Padding = new Padding(0, 0, 16, 0)
-        };
-
-        panel.Controls.Add(Title("Mês"));
-        panel.Controls.Add(_month);
-
-        panel.Controls.Add(Title("Faturamento do mês (R$)", top: 18));
-        panel.Controls.Add(_revenue);
-        panel.Controls.Add(Hint("Total das notas fiscais do mês, como vai no PGDAS-D."));
-
-        var optional = new GroupBox
-        {
-            Text = "Parâmetros (opcional)",
-            Font = BoldFont,
+            BackColor = Color.White,
             AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 22, 0, 0),
-            Padding = new Padding(10)
+            Dock = DockStyle.Fill,
+            Padding = new Padding(14, 10, 14, 12),
+            Margin = new Padding(0, 0, 0, 14)
         };
-        var grid = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Font = BaseFont };
-        AddField(grid, "Receita dos últimos 12 meses (RBT12)", _rbt12,
-            "Vazio: usa o faturamento do mês × 12.");
-        AddField(grid, "Fator R (%)", _fatorR,
-            "Folha ÷ receita dos 12 meses anteriores. Vazio: Anexo III (Fator R de 28% ou mais).");
-        AddField(grid, "Pró-labore (% do faturamento)", _proLaboreRate,
-            "28% mantém o Fator R e o Anexo III.");
-        AddField(grid, "Honorários contábeis (R$)", _accountantFee, null);
-        grid.Controls.Add(_export, 0, grid.RowCount);
-        grid.SetColumnSpan(_export, 2);
-        grid.RowCount++;
-        optional.Controls.Add(grid);
-        panel.Controls.Add(optional);
+        card.Paint += PaintBorder;
+
+        var grid = new TableLayoutPanel { ColumnCount = 6, AutoSize = true, Dock = DockStyle.Fill, BackColor = Color.White };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16));
+
+        Field(grid, 0, "Faturamento do mês (R$)", _revenue, "Total das notas do mês, como vai no PGDAS-D.", bold: true);
+        Field(grid, 1, "Receita dos últimos 12 meses — RBT12 (R$)", _rbt12, "Está no PGDAS-D. Vazio: faturamento × 12 (estimativa).", bold: true);
+        Field(grid, 2, "Fator R (%)", _fatorR, "Vazio: Anexo III.");
+        Field(grid, 3, "Pró-labore (% do faturamento)", _proLaboreRate, "28% mantém o Anexo III.");
+        Field(grid, 4, "Honorários contábeis (R$)", _accountantFee, null);
 
         var copy = new Button
         {
             Text = "Copiar resumo",
             AutoSize = true,
-            Padding = new Padding(10, 4, 10, 4),
-            Margin = new Padding(0, 22, 0, 0),
+            Padding = new Padding(10, 3, 10, 3),
             BackColor = Accent,
             ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat
+            FlatStyle = FlatStyle.Flat,
+            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Margin = new Padding(8, 0, 0, 0)
         };
         copy.FlatAppearance.BorderSize = 0;
         copy.Click += (_, _) => CopySummary();
-        panel.Controls.Add(copy);
-        panel.Controls.Add(Hint("Copia o resultado para colar no e-mail ou no WhatsApp."));
+        grid.Controls.Add(copy, 5, 1);
 
-        panel.Controls.Add(Hint(
-            "Tabelas de 2026: Simples Nacional (Anexos III e V), INSS 11% até o teto de R$ 8.475,55 " +
-            "e IRRF com a redução da Lei 15.270/2025. Valores estimados: confira sempre com o PGDAS-D.",
-            top: 22));
-        return panel;
+        grid.Controls.Add(_export, 0, 3);
+        grid.SetColumnSpan(_export, 6);
+
+        card.Controls.Add(grid);
+        return card;
     }
 
-    private Control BuildResultsPanel()
+    private static void Field(TableLayoutPanel grid, int column, string label, TextBox box, string? hint, bool bold = false)
     {
-        var panel = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
-        _results.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62));
-        _results.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38));
-        panel.Controls.Add(_warnings);
-        panel.Controls.Add(_results);
-        return panel;
+        grid.Controls.Add(new Label
+        {
+            Text = label,
+            AutoSize = true,
+            Font = bold ? BoldFont : BaseFont,
+            Margin = new Padding(0, 0, 12, 4),
+            Anchor = AnchorStyles.Left | AnchorStyles.Bottom
+        }, column, 0);
+        box.Dock = DockStyle.Fill;
+        box.Margin = new Padding(0, 0, 12, 0);
+        grid.Controls.Add(box, column, 1);
+        if (hint is not null)
+            grid.Controls.Add(Note(hint, top: 2), column, 2);
     }
 
-    private static TextBox NewInput(Font font, int width) => new()
+    private static TextBox NewInput(Font font) => new()
     {
         Font = font,
-        Width = width,
-        TextAlign = HorizontalAlignment.Right
+        TextAlign = HorizontalAlignment.Right,
+        BorderStyle = BorderStyle.FixedSingle
     };
 
-    private static Label Title(string text, int top = 0) => new()
+    private static void AddSpanning(TableLayoutPanel root, Control control)
+    {
+        var row = root.RowCount++;
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.Controls.Add(control, 0, row);
+        root.SetColumnSpan(control, 3);
+    }
+
+    private static void AddRow(TableLayoutPanel root, params Control[] controls)
+    {
+        var row = root.RowCount++;
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        for (var i = 0; i < controls.Length; i++)
+        {
+            controls[i].Margin = new Padding(i == 0 ? 0 : 8, controls[i].Margin.Top, i == controls.Length - 1 ? 0 : 8, controls[i].Margin.Bottom);
+            root.Controls.Add(controls[i], i, row);
+        }
+    }
+
+    private static Label CardCaption(string text) => new()
     {
         Text = text,
-        Font = TitleFont,
         AutoSize = true,
-        Margin = new Padding(0, top, 0, 4)
+        ForeColor = Muted,
+        Margin = new Padding(0, 0, 0, 4)
     };
 
-    private static Label Hint(string text, int top = 0) => new()
+    private static Label CardValue() => new()
+    {
+        AutoSize = true,
+        Font = CardValueFont,
+        Margin = new Padding(0)
+    };
+
+    private static Control Card(Label caption, Label value)
+    {
+        var card = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            BackColor = Color.White,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            Padding = new Padding(12, 12, 12, 12),
+            Margin = new Padding(0, 0, 0, 20)
+        };
+        card.Paint += PaintBorder;
+        card.Controls.Add(caption);
+        card.Controls.Add(value);
+        return card;
+    }
+
+    private static void PaintBorder(object? sender, PaintEventArgs e)
+    {
+        var control = (Control)sender!;
+        using var pen = new Pen(Border);
+        e.Graphics.DrawRectangle(pen, 0, 0, control.Width - 1, control.Height - 1);
+    }
+
+    private static Label Section(string text) => new()
     {
         Text = text,
+        Font = SectionFont,
+        AutoSize = true,
+        Margin = new Padding(0, 4, 0, 8)
+    };
+
+    private static Label Note(string text, int top = 4) => new()
+    {
+        Text = text,
+        Font = SmallFont,
         ForeColor = Muted,
         AutoSize = true,
-        MaximumSize = new Size(420, 0),
-        Margin = new Padding(0, top + 2, 0, 0),
-        Font = new Font("Segoe UI", 9f)
+        MaximumSize = new Size(380, 0),
+        Margin = new Padding(0, top, 0, 0)
     };
 
-    private static void AddField(TableLayoutPanel grid, string label, TextBox box, string? hint)
+    private static Control WithNote(Control grid, Label note)
     {
-        var row = grid.RowCount;
-        grid.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, row);
-        box.Anchor = AnchorStyles.Left;
-        box.Margin = new Padding(0, 6, 0, 0);
-        grid.Controls.Add(box, 1, row);
-        grid.RowCount++;
-        if (hint is null)
-            return;
-        var note = Hint(hint);
-        note.MaximumSize = new Size(380, 0);
-        grid.Controls.Add(note, 0, grid.RowCount);
-        grid.SetColumnSpan(note, 2);
-        grid.RowCount++;
+        var panel = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Dock = DockStyle.Fill };
+        grid.Margin = new Padding(0);
+        panel.Controls.Add(grid);
+        panel.Controls.Add(note);
+        panel.SizeChanged += (_, _) => grid.Width = panel.ClientSize.Width;
+        return panel;
     }
+
+    private static TableLayoutPanel NewGrid()
+    {
+        var grid = new TableLayoutPanel
+        {
+            ColumnCount = 2,
+            AutoSize = true,
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+        return grid;
+    }
+
+    private static void FillGrid(TableLayoutPanel grid, IEnumerable<(string Label, string Value, bool Bold)> rows)
+    {
+        grid.SuspendLayout();
+        grid.Controls.Clear();
+        grid.RowStyles.Clear();
+        grid.RowCount = 0;
+        foreach (var (label, value, bold) in rows)
+        {
+            var row = grid.RowCount++;
+            grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            grid.Controls.Add(Cell(label, bold), 0, row);
+            grid.Controls.Add(Cell(value, bold), 1, row);
+        }
+        grid.ResumeLayout();
+    }
+
+    private static Label Cell(string text, bool bold) => new()
+    {
+        Text = text,
+        Font = bold ? BoldFont : BaseFont,
+        AutoSize = true,
+        Dock = DockStyle.Fill,
+        Margin = new Padding(0),
+        Padding = new Padding(8, 6, 8, 6)
+    };
+
+    // ---------- calculation ----------
 
     private static void Reformat(TextBox box)
     {
@@ -232,40 +362,50 @@ internal sealed class MainForm : Form
 
         var s = WithdrawalCalculator.Summarize(revenue, rbt12, fatorR, proLaboreRate, fee, _export.Checked);
         _summary = s;
+        var rate = s.ProLaboreRate.ToString("0.##", Money.PtBr);
 
-        _results.SuspendLayout();
-        _results.Controls.Clear();
-        _results.RowStyles.Clear();
-        _results.RowCount = 0;
+        _cardWithdrawal.Text = Money.Brl(s.TotalWithdrawal);
+        _cardTaxesCaption.Text = $"Reservar para impostos (vence {DueDate():dd/MM/yyyy})";
+        _cardTaxes.Text = Money.Brl(s.TaxReserve);
+        _cardRevenue.Text = Money.Brl(s.Revenue);
 
-        Section("DAS — Simples Nacional");
-        Row($"Anexo {s.Bracket.Anexo}, faixa {s.Bracket.Number}", "");
-        Row("Receita dos últimos 12 meses (RBT12)" + (s.Rbt12FromRevenue ? " *" : ""), Money.Brl(s.Rbt12));
-        Row("Alíquota efetiva", Money.Percent(s.DasRate, 4));
-        Row("DAS a pagar", Money.Brl(s.Das), bold: true);
+        FillGrid(_gridCalculation,
+        [
+            ("Faturamento", Money.Brl(s.Revenue), true),
+            ($"(−) DAS ({Money.Percent(s.DasRate)}{(s.Rbt12FromRevenue ? ", RBT12 estimado" : "")})", Money.Brl(s.Das), false),
+            ("(−) Contador", Money.Brl(s.AccountantFee), false),
+            ($"(−) Pró-labore bruto ({rate}%)", Money.Brl(s.ProLaboreGross), false),
+            ("= Distribuição de lucros (isenta)", Money.Brl(s.Profit), true)
+        ]);
+        FillGrid(_gridProLabore,
+        [
+            ("Bruto", Money.Brl(s.ProLaboreGross), false),
+            ("(−) INSS 11%", Money.Brl(s.Inss), false),
+            ("(−) IRRF", Money.Brl(s.Irrf), false),
+            ("Líquido", Money.Brl(s.ProLaboreNet), true)
+        ]);
+        _payrollNote.Text = $"INSS e IRRF são pagos juntos em uma guia ({Money.Brl(s.PayrollTaxes)}).";
+        FillGrid(_gridMoney,
+        [
+            ("Pró-labore líquido", Money.Brl(s.ProLaboreNet), false),
+            ("Distribuição de lucros", Money.Brl(Math.Max(0m, s.Profit)), false),
+            ("Total a retirar", Money.Brl(s.TotalWithdrawal), true),
+            ("Guia do DAS", Money.Brl(s.Das), false),
+            ("Guia INSS + IRRF", Money.Brl(s.PayrollTaxes), false),
+            ("Contador", Money.Brl(s.AccountantFee), false)
+        ]);
 
-        Section($"Pró-labore ({s.ProLaboreRate.ToString("0.##", Money.PtBr)}% do faturamento)");
-        Row("Pró-labore bruto", Money.Brl(s.ProLaboreGross), bold: true);
-        Row("INSS (11%)", "− " + Money.Brl(s.Inss));
-        Row("IRRF", "− " + Money.Brl(s.Irrf));
-        Row("Guia única INSS + IRRF", Money.Brl(s.PayrollTaxes));
-        Row("Pró-labore líquido", Money.Brl(s.ProLaboreNet), bold: true);
+        var fator = s.FatorR is decimal f ? $"Fator R {f.ToString("0.00", Money.PtBr)}" : "Fator R não informado";
+        var exportText = _export.Checked
+            ? $"Sem ISS, PIS e COFINS (serviços exportados) a alíquota é {Money.Percent(s.DasRate)} ({Money.Brl(s.Das)})."
+            : $"Alíquota efetiva {Money.Percent(s.DasRate)} ({Money.Brl(s.Das)}).";
+        _dasText.Text =
+            $"Receita bruta dos últimos 12 meses (RBT12): {Money.Brl(s.Rbt12)}" +
+            (s.Rbt12FromRevenue ? " (estimada: faturamento × 12)" : "") +
+            $". {fator}: Anexo {s.Bracket.Anexo}, faixa {s.Bracket.Number}, alíquota nominal {s.Bracket.NominalRate.ToString("0.00", Money.PtBr)}%. " +
+            exportText;
 
-        Section("Distribuição de lucros");
-        Row("Faturamento", Money.Brl(s.Revenue));
-        Row("− DAS", Money.Brl(s.Das));
-        Row("− Honorários contábeis", Money.Brl(s.AccountantFee));
-        Row("− Pró-labore bruto", Money.Brl(s.ProLaboreGross));
-        Row("Lucro distribuível (isento)", Money.Brl(s.Profit), bold: true, color: s.Profit < 0 ? Color.Firebrick : null);
-
-        Section("Resumo");
-        Row("Total que o sócio pode retirar", Money.Brl(s.TotalWithdrawal), big: true);
-        Row("Pró-labore líquido + lucro", "");
-        Row("Impostos do mês (DAS + guia INSS/IRRF)", Money.Brl(s.TaxReserve), bold: true);
-        Row("Vencimento das guias", DueDate().ToString("dd/MM/yyyy"));
-
-        _results.ResumeLayout();
-        _warnings.Text = string.Join(Environment.NewLine + Environment.NewLine, Warnings(s));
+        _warnings.Text = string.Join(Environment.NewLine, Warnings(s));
     }
 
     private DateTime DueDate() => new DateTime(_month.Value.Year, _month.Value.Month, 20).AddMonths(1);
@@ -278,56 +418,17 @@ internal sealed class MainForm : Form
             yield break;
         }
         if (s.Rbt12FromRevenue)
-            yield return "* RBT12 estimado com o faturamento do mês × 12. Para o valor exato, informe a receita dos últimos 12 meses do PGDAS-D.";
+            yield return "RBT12 estimado com o faturamento do mês × 12. Para o DAS exato, informe a receita dos últimos 12 meses que está no PGDAS-D.";
         if (s.AnexoV)
             yield return $"Fator R de {Money.Percent(s.FatorR!.Value)} (abaixo de 28%): o DAS é calculado no Anexo V, bem mais caro.";
         else if (s.ProLaboreRate < 28m)
             yield return "Pró-labore abaixo de 28% do faturamento: o Fator R pode cair abaixo de 28% e levar a empresa ao Anexo V.";
         if (s.Profit < 0)
-            yield return "O faturamento não cobre o DAS, os honorários e o pró-labore: não há lucro para distribuir.";
+            yield return "O faturamento não cobre o DAS, o contador e o pró-labore: não há lucro para distribuir.";
         if (s.Profit > 50_000m)
             yield return "Lucros acima de R$ 50.000 no mês têm 10% de IR retido na fonte (Lei 15.270/2025).";
         if (s.Rbt12 > WithdrawalCalculator.AnexoIII[^1].UpTo)
             yield return "A receita dos últimos 12 meses passa do limite do Simples Nacional (R$ 4,8 milhões).";
-    }
-
-    private void Section(string text)
-    {
-        var label = new Label
-        {
-            Text = text,
-            Font = TitleFont,
-            ForeColor = Accent,
-            AutoSize = true,
-            Margin = new Padding(0, _results.RowCount == 0 ? 0 : 16, 0, 4)
-        };
-        _results.Controls.Add(label, 0, _results.RowCount);
-        _results.SetColumnSpan(label, 2);
-        _results.RowCount++;
-    }
-
-    private void Row(string label, string value, bool bold = false, bool big = false, Color? color = null)
-    {
-        var font = big ? BigFont : bold ? BoldFont : BaseFont;
-        _results.Controls.Add(new Label
-        {
-            Text = label,
-            AutoSize = true,
-            Font = big ? BoldFont : font,
-            Anchor = AnchorStyles.Left,
-            Margin = new Padding(0, 3, 8, 3),
-            ForeColor = value.Length == 0 && !bold ? Muted : ForeColor
-        }, 0, _results.RowCount);
-        _results.Controls.Add(new Label
-        {
-            Text = value,
-            AutoSize = true,
-            Font = font,
-            Anchor = AnchorStyles.Right,
-            Margin = new Padding(0, 3, 0, 3),
-            ForeColor = color ?? (big ? Accent : ForeColor)
-        }, 1, _results.RowCount);
-        _results.RowCount++;
     }
 
     private void CopySummary()
@@ -337,19 +438,19 @@ internal sealed class MainForm : Form
         var text = new StringBuilder()
             .AppendLine($"Retirada mensal — {_month.Value:MM/yyyy}")
             .AppendLine($"Faturamento: {Money.Brl(s.Revenue)}")
+            .AppendLine($"RBT12: {Money.Brl(s.Rbt12)}{(s.Rbt12FromRevenue ? " (estimado)" : "")}")
             .AppendLine()
-            .AppendLine($"DAS (Anexo {s.Bracket.Anexo}, faixa {s.Bracket.Number}, alíquota efetiva {Money.Percent(s.DasRate, 4)}): {Money.Brl(s.Das)}")
+            .AppendLine($"DAS (Anexo {s.Bracket.Anexo}, faixa {s.Bracket.Number}, {Money.Percent(s.DasRate)}): {Money.Brl(s.Das)}")
             .AppendLine($"Pró-labore bruto ({s.ProLaboreRate.ToString("0.##", Money.PtBr)}%): {Money.Brl(s.ProLaboreGross)}")
             .AppendLine($"INSS (11%): {Money.Brl(s.Inss)}")
             .AppendLine($"IRRF: {Money.Brl(s.Irrf)}")
-            .AppendLine($"Guia única INSS + IRRF: {Money.Brl(s.PayrollTaxes)}")
+            .AppendLine($"Guia INSS + IRRF: {Money.Brl(s.PayrollTaxes)}")
             .AppendLine($"Pró-labore líquido: {Money.Brl(s.ProLaboreNet)}")
-            .AppendLine($"Honorários contábeis: {Money.Brl(s.AccountantFee)}")
-            .AppendLine($"Lucro distribuível (isento): {Money.Brl(s.Profit)}")
+            .AppendLine($"Contador: {Money.Brl(s.AccountantFee)}")
+            .AppendLine($"Distribuição de lucros (isenta): {Money.Brl(s.Profit)}")
             .AppendLine()
-            .AppendLine($"Total que o sócio pode retirar: {Money.Brl(s.TotalWithdrawal)}")
-            .AppendLine($"Impostos do mês (DAS + guia INSS/IRRF): {Money.Brl(s.TaxReserve)}")
-            .AppendLine($"Vencimento das guias: {DueDate():dd/MM/yyyy}")
+            .AppendLine($"Total a retirar: {Money.Brl(s.TotalWithdrawal)}")
+            .AppendLine($"Reservar para impostos: {Money.Brl(s.TaxReserve)} (vence {DueDate():dd/MM/yyyy})")
             .ToString();
         try
         {
