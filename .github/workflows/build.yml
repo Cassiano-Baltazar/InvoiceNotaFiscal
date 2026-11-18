@@ -38,3 +38,19 @@ jobs:
             dist/appsettings.json
             dist/wwwroot/**
             dist/*.staticwebassets.endpoints.json
+
+      # Standalone pró-labore calculator for the accountant (no database or certificate).
+      - name: Publish pró-labore calculator
+        run: >
+          dotnet publish src/CalculoProLabore/CalculoProLabore.csproj
+          -c Release -r win-x64 --self-contained true
+          /p:PublishSingleFile=true
+          /p:IncludeNativeLibrariesForSelfExtract=true
+          /p:EnableCompressionInSingleFile=true
+          -o dist-calculo
+
+      - name: Upload pró-labore calculator
+        uses: actions/upload-artifact@v4
+        with:
+          name: CalculoProLabore-win-x64
+          path: dist-calculo/CalculoProLabore.exe

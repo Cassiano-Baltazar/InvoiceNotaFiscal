@@ -51,14 +51,20 @@ public static class WithdrawalCalculator
     }
 
     /// <summary>Effective DAS rate (fraction) for exported services, given the revenue of the last 12 months.</summary>
-    public static decimal ExportDasRate(decimal rbt12, bool anexoV = false)
+    public static decimal ExportDasRate(decimal rbt12, bool anexoV = false) => DasRate(rbt12, anexoV, export: true);
+
+    /// <summary>
+    /// Effective DAS rate (fraction), given the revenue of the last 12 months. For exported services the
+    /// ISS, PIS and COFINS shares are removed; for services in Brazil the whole rate is due.
+    /// </summary>
+    public static decimal DasRate(decimal rbt12, bool anexoV, bool export)
     {
         var bracket = BracketFor(rbt12, anexoV);
         var nominal = bracket.NominalRate / 100m;
         var effective = rbt12 <= 0 || bracket.Deduction == 0
             ? nominal
             : (rbt12 * nominal - bracket.Deduction) / rbt12;
-        return effective * (1 - bracket.ExportExcludedShare);
+        return export ? effective * (1 - bracket.ExportExcludedShare) : effective;
     }
 
     /// <summary>
@@ -119,5 +125,52 @@ public static class WithdrawalCalculator
             tax -= Math.Min(tax, 978.62m - 0.133145m * proLabore);
 
         return Math.Max(0m, Math.Round(tax, 2));
+    }
+
+    /// <summary>Result of <see cref="Summarize"/>: the month's taxes, pró-labore and profit to distribute.</summary>
+    public sealed record MonthSummary(
+        decimal Revenue,
+        decimal Rbt12,
+        bool Rbt12FromRevenue,
+        decimal? FatorR,
+        SimplesBracket Bracket,
+        decimal DasRate,
+        decimal Das,
+        decimal ProLaboreRate,
+        decimal ProLaboreGross,
+        decimal Inss,
+        decimal Irrf,
+        decimal AccountantFee)
+    {
+        public bool AnexoV => Bracket.Anexo == "V";
+        /// <summary>INSS and IRRF on the pró-labore, paid in one single guia.</summary>
+        public decimal PayrollTaxes => Inss + Irrf;
+        public decimal ProLaboreNet => ProLaboreGross - PayrollTaxes;
+        /// <summary>Profit that can be distributed (isento): revenue less DAS, accountant and gross pró-labore.</summary>
+        public decimal Profit => Revenue - Das - AccountantFee - ProLaboreGross;
+        public decimal TotalWithdrawal => ProLaboreNet + Math.Max(0m, Profit);
+        public decimal TaxReserve => Das + PayrollTaxes;
+    }
+
+    /// <summary>
+    /// Calculates one month from its revenue alone, as the standalone calculator does.
+    /// </summary>
+    /// <param name="revenue">Revenue of the month.</param>
+    /// <param name="rbt12">Revenue of the last 12 months (RBT12) as in the PGDAS-D; null takes the month's revenue times 12.</param>
+    /// <param name="fatorR">Fator R (fraction, 0,28 = 28%) of the months before; null means Anexo III (pró-labore of at least 28%).</param>
+    /// <param name="proLaboreRate">Pró-labore as a percentage of the revenue (28 = 28%).</param>
+    /// <param name="accountantFee">Accountant's monthly fee.</param>
+    /// <param name="export">True for exported services (no ISS, PIS and COFINS in the DAS).</param>
+    public static MonthSummary Summarize(decimal revenue, decimal? rbt12, decimal? fatorR, decimal proLaboreRate, decimal accountantFee, bool export = true)
+    {
+        revenue = Math.Max(0m, revenue);
+        var rbt = rbt12 ?? revenue * 12;
+        var anexoV = fatorR < FatorRThreshold;
+        var dasRate = DasRate(rbt, anexoV, export);
+        var proLabore = Math.Round(revenue * proLaboreRate / 100m, 2);
+        var inss = Inss(proLabore);
+        return new MonthSummary(
+            revenue, rbt, rbt12 is null, fatorR, BracketFor(rbt, anexoV), dasRate,
+            Math.Round(revenue * dasRate, 2), proLaboreRate, proLabore, inss, Irrf(proLabore, inss), accountantFee);
     }
 }
